@@ -10,4 +10,11 @@ Running summary of decisions made and phases completed. Detailed per-phase plans
 
 ## Phases completed
 
-_None yet — Phase 1 (Project Scaffolding & Environment Setup) is in progress. See `docs/PLAN.md`._
+### Phase 1 — Project Scaffolding & Environment Setup (mostly done)
+
+- Git repo initialized at project root, initial commit made.
+- `backend/` — FastAPI app scaffolded: venv, dependencies installed, `app/main.py` with CORS + `/health`, `app/core/config.py` for env-based settings. Verified `uvicorn app.main:app` runs and `/health` returns `200 {"status":"ok"}`.
+- `frontend/` — React app scaffolded via Vite (`npm create vite@latest -- --template react`), `react-router-dom` installed, placeholder routes wired for `/` (apply page), `/admin/login`, `/admin` (dashboard). Verified `npm run dev` runs.
+- `.env.example` added for both backend and frontend; `.gitignore` confirmed to exclude `venv/`, `node_modules/`, and all `.env` files.
+
+**Still open before Phase 1 can close**: a real Supabase project needs to be created and its URL/keys/DB connection string added to `backend/.env` (not committed). This requires the user's Supabase account — see next step.
