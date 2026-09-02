@@ -16,6 +16,7 @@ Full spec, product vision, phase roadmap, current-phase plan, and decision log a
 - `docs/ROADMAP.md` — the full list of build phases and the stack/hosting decision.
 - `docs/PLAN.md` — **detailed plan for the current phase only**. It is replaced wholesale when a phase finishes (do not expect history here).
 - `docs/PROGRESS.md` — durable summary of decisions made and phases completed so far. Check this first to know what already exists before re-deriving it from code.
+- `docs/TEST.md` — phase-by-phase test requirements (automated backend tests + manual frontend checklist). Write/extend tests alongside a phase's code, not after.
 
 ## Stack
 
@@ -33,7 +34,12 @@ python -m venv venv                          # one-time
 cp .env.example .env                          # then fill in Supabase/DB values
 ./venv/Scripts/python -m uvicorn app.main:app --reload
 ```
-No test suite or linter is configured yet.
+Tests (`backend/tests/`, pytest + FastAPI `TestClient`, run against the real Supabase dev DB — see `docs/TEST.md`):
+```
+./venv/Scripts/pip install -r requirements-dev.txt   # one-time: pytest + httpx2
+./venv/Scripts/python -m pytest -v
+```
+No linter configured yet.
 
 ### Frontend (`frontend/`)
 ```
@@ -49,7 +55,11 @@ npm run preview
 **Backend** (`backend/app/`) is organized by layer, not by feature:
 - `main.py` — FastAPI app instance, CORS middleware (origin from `settings.frontend_origin`), route registration.
 - `core/config.py` — all environment-driven settings (Supabase URL/keys, `DATABASE_URL`, auth secret, frontend origin) via `pydantic-settings`, loaded from `backend/.env`.
-- `api/`, `models/`, `schemas/`, `services/` — currently empty placeholders for routers, SQLAlchemy models, Pydantic schemas, and business logic, to be filled in as later phases (see `docs/ROADMAP.md`) land. When adding a resource (jobs, applications, auth), follow this same split rather than putting logic directly in `main.py`.
+- `api/` — routers (`auth.py`, `jobs.py`, ...), one file per resource, registered in `main.py` via `include_router`.
+- `models/` — SQLAlchemy models (`Job`, `Application`, `Admin`), declared against `models/base.py`'s `Base`; `core/db.py` holds the engine/session (`get_db` dependency).
+- `schemas/` — Pydantic request/response models, one file per resource, imported by the matching router.
+- `services/` — business logic that isn't pure routing: `services/auth.py` (password check, JWT create/decode, `get_current_admin` dependency), `services/storage.py` (Supabase Storage bucket access).
+When adding a resource, follow this same split rather than putting logic directly in `main.py`.
 
 Data access is direct to the Supabase Postgres instance via `DATABASE_URL` (SQLAlchemy/psycopg2), not through the Supabase REST client — the `supabase` Python package is used for Storage (resume uploads) and any auth-adjacent calls, not as the primary DB layer.
 

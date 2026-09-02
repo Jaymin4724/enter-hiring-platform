@@ -1,33 +1,37 @@
 # PLAN.md
 
-Detailed plan for the **current phase only**. Replaced entirely when this phase is done — see `docs/ROADMAP.md` for the full phase list and `docs/PROGRESS.md` for what's already done.
+Detailed plan for the **current phase only**. Replaced entirely when this phase is done — see `docs/ROADMAP.md` for the full phase list, `docs/PROGRESS.md` for what's already done, and `docs/TEST.md` for the test requirements this phase must satisfy before it's marked complete.
 
-## Phase 3 — Backend API: Auth & Jobs
+## Phase 4 — Backend API: Applications
 
 ### Goal
-Admin can log in over the API, and jobs are fully CRUD-able. Public read-only jobs endpoint exists for the candidate-facing dropdown.
+Candidates can submit an application (with resume) through the API, and the admin can list/filter/move them through the stage pipeline. Tests are written alongside each endpoint, not after.
 
 ### Tasks
 
-- [ ] Pydantic schemas in `backend/app/schemas/`:
-  - [ ] `job.py` — `JobCreate`, `JobUpdate`, `JobOut`
-  - [ ] `auth.py` — `LoginRequest`, `TokenResponse`
-- [ ] `app/services/auth.py`:
-  - [ ] `verify_password` / password check using `bcrypt` directly (not passlib — see `docs/PROGRESS.md`)
-  - [ ] JWT create/decode helpers (`python-jose`), using `settings.auth_secret_key` and `settings.auth_token_expire_minutes`
-  - [ ] FastAPI dependency `get_current_admin` that reads the bearer token and loads the `Admin` row
-- [ ] `app/api/auth.py` router:
-  - [ ] `POST /auth/login` — email+password against `admins` table, returns a JWT on success, 401 on failure
-- [ ] `app/api/jobs.py` router:
-  - [ ] `GET /jobs` — public, list all jobs (for the candidate dropdown)
-  - [ ] `POST /jobs` — admin-only, create
-  - [ ] `PUT /jobs/{id}` — admin-only, update
-  - [ ] `DELETE /jobs/{id}` — admin-only, delete (applications referencing it cascade per the model relationship)
-- [ ] Wire both routers into `app/main.py`
-- [ ] Manual check: login with `admin@enter.in` / the seeded password, use the token to create/edit/delete a job, confirm `GET /jobs` works without a token
+- [ ] `app/schemas/application.py` — `ApplicationOut`, `StageUpdate` (single `stage` field, validated against `STAGES`)
+- [ ] `app/services/storage.py` — extend with `upload_resume(file, application_id)` that uploads to the `resumes` bucket and returns the stored path
+- [ ] `app/api/applications.py` router:
+  - [ ] `POST /applications` — public, multipart form (name, phone, email, resume file, job_id, note), validates job_id exists, uploads resume, creates the row with stage `"Applied"`
+  - [ ] `GET /applications` — admin-only, optional `job_id` and `stage` query filters
+  - [ ] `PATCH /applications/{id}/stage` — admin-only, body `{ "stage": "..." }`, 400 if not one of the 9 valid stages
+  - [ ] `GET /applications/{id}/resume` — admin-only, returns a signed URL (or redirect) to the resume in the private bucket
+- [ ] Wire router into `app/main.py`
+- [ ] `backend/tests/test_applications.py` — cover every unchecked box under "Phase 4" in `docs/TEST.md`:
+  - [ ] submit succeeds, stage defaults to Applied
+  - [ ] submit rejects missing required field
+  - [ ] submit rejects invalid email
+  - [ ] resume ends up in storage, path stored on the row
+  - [ ] list requires auth
+  - [ ] filter by job_id
+  - [ ] filter by stage
+  - [ ] stage update accepts each of the 9 stages
+  - [ ] stage update rejects an invalid value
+  - [ ] tests clean up any application/job/resume they create
+- [ ] Run `./venv/Scripts/python -m pytest -v`, confirm everything (Phase 3 + Phase 4 tests) passes
+- [ ] Update `docs/TEST.md` — check off the Phase 4 boxes once their tests are green
 
 ### Exit criteria
-- `/auth/login` issues a working token for the seeded admin and rejects bad credentials.
-- Jobs CRUD works end-to-end against the real Supabase DB, protected by the token where required.
-- `GET /jobs` works with no auth — the public form will call this in Phase 5.
-- No application-submission or resume-upload logic yet — that's Phase 4.
+- All Phase 4 boxes in `docs/TEST.md` are checked and the full pytest suite passes.
+- A resume file uploaded through `POST /applications` is retrievable by an admin.
+- No frontend work yet — that starts in Phase 5.

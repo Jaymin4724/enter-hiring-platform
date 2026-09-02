@@ -32,3 +32,14 @@ Running summary of decisions made and phases completed. Detailed per-phase plans
 - Dependency swap: `passlib[bcrypt]` was in the original Phase 1 requirements list but its bcrypt backend detection is broken with the currently-installed `bcrypt` (4.x) — a known passlib/bcrypt compatibility issue. Switched to calling `bcrypt.hashpw`/`bcrypt.checkpw` directly (see `backend/seed.py`); `requirements.txt` updated to drop `passlib` in favor of plain `bcrypt`. Use `bcrypt` directly again for login verification in Phase 3, not passlib.
 
 **Phase 2 is complete.**
+
+### Phase 3 — Backend API: Auth & Jobs
+
+- Schemas added: `app/schemas/job.py` (`JobCreate`/`JobUpdate`/`JobOut`), `app/schemas/auth.py` (`LoginRequest`/`TokenResponse`, using `EmailStr` — required adding `email-validator` to `requirements.txt`).
+- `app/services/auth.py`: password check via `bcrypt` directly (consistent with the Phase 2 passlib swap), JWT create/decode, `get_current_admin` FastAPI dependency (bearer token).
+- Library decision: used **PyJWT**, not `python-jose` (which was in the original Phase 1 plan). Checked current guidance — FastAPI's own docs have moved off `python-jose` due to maintenance/security concerns, PyJWT is the actively maintained choice. `requirements.txt` updated accordingly.
+- Routers: `app/api/auth.py` (`POST /auth/login`), `app/api/jobs.py` (`GET /jobs` public, `POST`/`PUT /{id}`/`DELETE /{id}` admin-only via `get_current_admin`). Both wired into `app/main.py`.
+- Testing: added a real pytest suite (`backend/tests/`, `TestClient`, run against the live Supabase dev DB) instead of only manual curl checks — see `docs/TEST.md` for the phase-by-phase test plan going forward. `backend/requirements-dev.txt` added for `pytest` + `httpx2` (not plain `httpx` — Starlette's TestClient now deprecates it in favor of `httpx2`). All 9 tests pass: login success/wrong-password/unknown-email, public `GET /jobs`, auth-required checks on create/update/delete, and a full create→update→delete lifecycle that cleans up after itself.
+- Manually verified against the live API too: login returns a token, `GET /jobs` returns the 10 seeded jobs with no auth, unauthenticated writes return 401.
+
+**Phase 3 is complete.**
