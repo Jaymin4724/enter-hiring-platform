@@ -2,27 +2,32 @@
 
 Detailed plan for the **current phase only**. Replaced entirely when this phase is done — see `docs/ROADMAP.md` for the full phase list and `docs/PROGRESS.md` for what's already done.
 
-## Phase 2 — Supabase Schema & Storage Setup
+## Phase 3 — Backend API: Auth & Jobs
 
 ### Goal
-Real tables in the Supabase Postgres database, a resume storage bucket, and a seed script that populates 10 jobs and the one admin account — everything Phase 3/4 API work will read and write against.
+Admin can log in over the API, and jobs are fully CRUD-able. Public read-only jobs endpoint exists for the candidate-facing dropdown.
 
 ### Tasks
 
-- [ ] Define SQLAlchemy models in `backend/app/models/`:
-  - [ ] `Job` — id, title, department, location, description, created_at
-  - [ ] `Application` — id, job_id (FK), name, phone, email, resume_path, note, stage, created_at, updated_at
-  - [ ] `Admin` — id, email, password_hash
-- [ ] `backend/app/core/db.py` — SQLAlchemy engine + session, reading `DATABASE_URL` from settings
-- [ ] Create the tables (Alembic migration, or a simple `create_all()` bootstrap script — pick whichever is faster; note the choice in `docs/PROGRESS.md`)
-- [ ] Create a `resumes` bucket in Supabase Storage (private, not public — resumes shouldn't be world-readable by URL guessing)
-- [ ] `backend/app/services/seed.py` — seed script:
-  - [ ] Insert 10 sample jobs (varied titles/departments so the dropdown looks real)
-  - [ ] Insert the admin account: email `admin@enter.in`, a chosen password (hashed with passlib/bcrypt) — record the plaintext password in `docs/PROGRESS.md` for submission, not in the repo
-- [ ] Run the seed script against the real Supabase DB and confirm rows exist (quick `SELECT` check)
+- [ ] Pydantic schemas in `backend/app/schemas/`:
+  - [ ] `job.py` — `JobCreate`, `JobUpdate`, `JobOut`
+  - [ ] `auth.py` — `LoginRequest`, `TokenResponse`
+- [ ] `app/services/auth.py`:
+  - [ ] `verify_password` / password check using `bcrypt` directly (not passlib — see `docs/PROGRESS.md`)
+  - [ ] JWT create/decode helpers (`python-jose`), using `settings.auth_secret_key` and `settings.auth_token_expire_minutes`
+  - [ ] FastAPI dependency `get_current_admin` that reads the bearer token and loads the `Admin` row
+- [ ] `app/api/auth.py` router:
+  - [ ] `POST /auth/login` — email+password against `admins` table, returns a JWT on success, 401 on failure
+- [ ] `app/api/jobs.py` router:
+  - [ ] `GET /jobs` — public, list all jobs (for the candidate dropdown)
+  - [ ] `POST /jobs` — admin-only, create
+  - [ ] `PUT /jobs/{id}` — admin-only, update
+  - [ ] `DELETE /jobs/{id}` — admin-only, delete (applications referencing it cascade per the model relationship)
+- [ ] Wire both routers into `app/main.py`
+- [ ] Manual check: login with `admin@enter.in` / the seeded password, use the token to create/edit/delete a job, confirm `GET /jobs` works without a token
 
 ### Exit criteria
-- `jobs`, `applications`, `admins` tables exist in Supabase with the right columns.
-- 10 jobs and 1 admin row are present in the database.
-- A `resumes` storage bucket exists.
-- Nothing here builds API routes or UI yet — that's Phase 3 onward.
+- `/auth/login` issues a working token for the seeded admin and rejects bad credentials.
+- Jobs CRUD works end-to-end against the real Supabase DB, protected by the token where required.
+- `GET /jobs` works with no auth — the public form will call this in Phase 5.
+- No application-submission or resume-upload logic yet — that's Phase 4.
