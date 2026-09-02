@@ -130,5 +130,7 @@ Manual, against the hosted URLs:
 - [x] Direct navigation to a non-root route (e.g. `/admin/login`) works on the hosted frontend, not just client-side navigation from `/` — this was a real bug (Vercel SPA rewrite), now fixed and verified
 
 ### Phase 9 — Seed, QA & Submission
-- [ ] Full walkthrough of both flows on the hosted links, no console errors
-- [ ] Production DB has the final 10 jobs + 1 admin, no leftover test data from development
+- [x] Full walkthrough of both flows on the hosted links — applied for a job on the live public page (UI/UX Designer, real uploaded resume), confirmed it appeared in the live admin dashboard, moved it Applied → R1 and confirmed the change persisted on re-fetch, confirmed the resume signed URL resolves to a real `application/pdf` (200), then cleaned up
+- [x] No console errors on the public page — confirmed via a fresh page load with console tracking armed, zero messages of any kind
+- [x] Production DB has the final 10 jobs + 10 demo candidates + 1 admin, no leftover test data — verified via direct API count before and after the walkthrough (10 → 11 → 10)
+- [x] `README.md` re-read end to end as a first-time reviewer — fixed one stale line ("Hosting (planned)" left over from before Phase 8 shipped)

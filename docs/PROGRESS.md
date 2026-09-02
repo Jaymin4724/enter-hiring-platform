@@ -126,3 +126,13 @@ Running summary of decisions made and phases completed. Detailed per-phase plans
   - Backend API: https://enter-hiring-platform.onrender.com
 
 **Phase 8 is complete.** Every deployment issue hit along the way (Render plan default, wrong start command, IPv6-only DB host, multi-origin CORS string, missing SPA rewrite) was a real, verified root cause — each one confirmed via an actual error message or a live header/response check, not guessed at.
+
+### Phase 9 — Seed, QA & Submission Polish
+
+- Production DB state confirmed clean before starting: exactly 10 jobs, 10 demo candidates, 1 admin — no leftover test data from Phase 8's deployment debugging.
+- Full cold-reviewer walkthrough on the live hosted links (not localhost): applied for the UI/UX Designer role on the live public page with a real uploaded resume; console tracking confirmed zero messages of any kind on page load (no errors, no warnings); confirmed the application appeared correctly via the production API; moved it Applied → R1 via the stage-update endpoint and confirmed the change persisted on re-fetch; confirmed the resume's signed URL resolves to a real `200 application/pdf`; cleaned up afterward (DB back to exactly 10 jobs / 10 applications).
+- Chrome extension disconnected twice mid-walkthrough (a sandbox tooling issue, not a product bug) — rather than keep fighting flaky screenshots, switched to verifying the same flows directly against the live API, which exercises the identical backend code paths the UI calls. The admin UI itself was already thoroughly screenshot-verified in Phases 6/7.
+- `README.md` re-read end to end as a first-time reviewer would: found and fixed one stale line — the tech stack table still said "Hosting (planned)" even though Phase 8 had already shipped and verified it.
+- `docs/PROGRESS.md` (this file) reviewed for coherence — reads as a complete, consistent account of the whole build.
+
+**Phase 9 is complete. This was the last phase — the project is done.**

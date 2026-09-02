@@ -47,7 +47,7 @@ npm run dev                 # http://localhost:5173
 | Styling | Tailwind CSS v4 + shadcn/ui | Accessible components out of the box (Radix under the hood) instead of hand-rolling dialogs/dropdowns/tables under a 24h clock. |
 | Database + file storage | Supabase (Postgres + Storage) | One provider for both the relational data and resume files, generous free tier, fast to stand up. |
 | Auth | Custom JWT (PyJWT) + bcrypt | The assignment only needed one hardcoded admin account — a full auth provider would be overkill. Chose PyJWT over the older `python-jose` after checking current guidance (FastAPI's own docs moved off it for maintenance reasons). |
-| Hosting (planned) | Vercel (frontend) + Render (backend) | Free tier, minimal config, matches a small two-service app. |
+| Hosting | Vercel (frontend) + Render (backend) | Free tier, minimal config, matches a small two-service app. |
 
 ## Architecture
 
