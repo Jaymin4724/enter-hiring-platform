@@ -43,3 +43,13 @@ Running summary of decisions made and phases completed. Detailed per-phase plans
 - Manually verified against the live API too: login returns a token, `GET /jobs` returns the 10 seeded jobs with no auth, unauthenticated writes return 401.
 
 **Phase 3 is complete.**
+
+### Phase 4 — Backend API: Applications
+
+- `app/schemas/application.py`: `ApplicationOut`, `StageUpdate` (validates against the 9-stage list from `app/models/application.py`).
+- `app/services/storage.py` extended: `upload_resume()` (validates content type against PDF/DOC/DOCX, 5MB size cap, uploads to the private `resumes` bucket), `get_resume_signed_url()`, `delete_resume()`.
+- `app/api/applications.py`: `POST /applications` (public, multipart — validates email via `email_validator`, phone via regex, resume type/size; 404 on unknown job), `GET /applications` (admin-only, `job_id`/`stage` filters), `PATCH /applications/{id}/stage` (admin-only), `GET /applications/{id}/resume` (admin-only, signed URL). Wired into `app/main.py`.
+- Fixed a real deprecation warning surfaced during test runs: `status.HTTP_422_UNPROCESSABLE_ENTITY` is deprecated in current Starlette in favor of `HTTP_422_UNPROCESSABLE_CONTENT` — swapped across `applications.py`.
+- Testing: `backend/tests/test_applications.py`, 13 tests, all passing — covers valid submit, every validation failure path (missing field, bad email, bad phone, unknown job, bad file type), auth-gating on all three admin endpoints, job/stage filtering, and every one of the 9 stage values accepted plus an invalid one rejected. Full suite is now 22 tests, all green. Test applications clean up their own DB rows via a fixture teardown (resume files in Storage are not cleaned up per test — acceptable for a 24h build, noted here rather than silently left undocumented).
+
+**Phase 4 is complete.**

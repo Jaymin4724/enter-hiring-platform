@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, jobs
+from app.api import applications, auth, jobs
 from app.core.config import settings
 
 app = FastAPI(title="enter — Hiring API")
@@ -16,6 +16,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(jobs.router)
+app.include_router(applications.router)
 
 
 @app.get("/health")

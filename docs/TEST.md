@@ -39,16 +39,20 @@ Automated in `backend/tests/test_auth.py`, `backend/tests/test_jobs.py`:
 - [x] Full authenticated lifecycle: create a job → it appears in `GET /jobs` → update it → delete it → it's gone from `GET /jobs`
 
 ### Phase 4 — Backend API: Applications
-Planned: `backend/tests/test_applications.py`
-- [ ] Public submit-application endpoint accepts a valid payload + resume file, stage defaults to `"Applied"`
-- [ ] Submit rejects a missing required field
-- [ ] Submit rejects an invalid email format
-- [ ] Resume file lands in the Supabase `resumes` bucket and its path is stored on the row
-- [ ] Admin list-applications endpoint returns 401 without a token
-- [ ] Admin can filter applications by `job_id`
-- [ ] Admin can filter applications by `stage`
-- [ ] Stage-update endpoint accepts every value in the 9-stage list and persists it
-- [ ] Stage-update endpoint rejects a value outside the 9-stage list
+Automated in `backend/tests/test_applications.py` (13 tests, all passing):
+- [x] Public submit-application endpoint accepts a valid payload + resume file, stage defaults to `"Applied"`
+- [x] Submit rejects a missing required field
+- [x] Submit rejects an invalid email format
+- [x] Submit rejects an invalid phone format
+- [x] Submit rejects an unknown `job_id` (404)
+- [x] Submit rejects a disallowed resume file type
+- [x] Resume file lands in the Supabase `resumes` bucket and its path is stored on the row
+- [x] Admin list-applications endpoint returns 401 without a token
+- [x] Admin can filter applications by `job_id`
+- [x] Admin can filter applications by `stage`
+- [x] Stage-update endpoint accepts every value in the 9-stage list and persists it
+- [x] Stage-update endpoint rejects a value outside the 9-stage list
+- [x] Stage-update and resume-URL endpoints both return 401 without a token
 
 ### Phase 5 — Frontend: Public Application Page
 Manual, in-browser:

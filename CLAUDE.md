@@ -55,10 +55,10 @@ npm run preview
 **Backend** (`backend/app/`) is organized by layer, not by feature:
 - `main.py` — FastAPI app instance, CORS middleware (origin from `settings.frontend_origin`), route registration.
 - `core/config.py` — all environment-driven settings (Supabase URL/keys, `DATABASE_URL`, auth secret, frontend origin) via `pydantic-settings`, loaded from `backend/.env`.
-- `api/` — routers (`auth.py`, `jobs.py`, ...), one file per resource, registered in `main.py` via `include_router`.
-- `models/` — SQLAlchemy models (`Job`, `Application`, `Admin`), declared against `models/base.py`'s `Base`; `core/db.py` holds the engine/session (`get_db` dependency).
+- `api/` — routers (`auth.py`, `jobs.py`, `applications.py`), one file per resource, registered in `main.py` via `include_router`.
+- `models/` — SQLAlchemy models (`Job`, `Application`, `Admin`), declared against `models/base.py`'s `Base`; `core/db.py` holds the engine/session (`get_db` dependency). `models/application.py` also holds `STAGES` (the 9-value hiring pipeline list) and `DEFAULT_STAGE` — the single source of truth for valid stage values, imported by both the schema validator and any code checking a stage.
 - `schemas/` — Pydantic request/response models, one file per resource, imported by the matching router.
-- `services/` — business logic that isn't pure routing: `services/auth.py` (password check, JWT create/decode, `get_current_admin` dependency), `services/storage.py` (Supabase Storage bucket access).
+- `services/` — business logic that isn't pure routing: `services/auth.py` (password check, JWT create/decode, `get_current_admin` dependency), `services/storage.py` (Supabase Storage: `upload_resume` with content-type/size validation, `get_resume_signed_url`, `delete_resume`, `ensure_resume_bucket`).
 When adding a resource, follow this same split rather than putting logic directly in `main.py`.
 
 Data access is direct to the Supabase Postgres instance via `DATABASE_URL` (SQLAlchemy/psycopg2), not through the Supabase REST client — the `supabase` Python package is used for Storage (resume uploads) and any auth-adjacent calls, not as the primary DB layer.
