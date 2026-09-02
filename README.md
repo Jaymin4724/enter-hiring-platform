@@ -11,7 +11,9 @@ A candidate application + hiring management system, built for the **enter AI Ful
 - **Admin dashboard**: https://enter-hiring-platform.vercel.app/admin/login
 - **Backend API**: https://enter-hiring-platform.onrender.com
 
-⚠️ Deployment is in progress — the backend is up but its database connection needs a fix (Supabase's direct connection is IPv6-only, Render is IPv4-only; switching to Supabase's Session Pooler connection string) before the site is actually usable end to end. This notice will be removed once verified working.
+Verified working end to end on these live links: applied for a real job on the hosted public page, confirmed it appeared in the hosted admin dashboard with the correct job, stage, and a working resume link — then cleaned up that test data.
+
+**Note on cold starts**: the backend is on Render's free tier, which spins down after 15 minutes of no traffic and takes 30-60s to wake up on the next request. If the site feels slow to load jobs on first visit, that's why — not a bug.
 
 ## Quick start (local)
 
@@ -72,7 +74,7 @@ One React app serves both surfaces (routed, not two separate deployables); one F
 - ✅ Admin jobs management — full create/edit/delete, mobile-friendly table.
 - ✅ Admin candidates view — every field, job + stage filters (individually and combined), inline stage changes across all 9 pipeline stages, resume access via signed URLs.
 - ✅ Backend — every endpoint the assignment asks for, JWT-protected where it should be, 36 automated tests passing.
-- 🚧 Hosting/deployment — not started yet (deploy blueprint is ready, see `render.yaml`).
+- ✅ Hosting/deployment — frontend on Vercel, backend on Render, verified end to end on the live links above.
 
 ## Testing
 

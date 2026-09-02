@@ -94,7 +94,12 @@ There is one frontend origin and one backend origin — the admin dashboard is n
 
 ## Deployment
 
-`render.yaml` at the repo root is a Render Blueprint for the backend (root dir `backend`, build/start commands, required env vars listed with `sync: false` so secrets are entered once in the Render dashboard, never committed). Vercel needs no config file for the frontend — set Root Directory to `frontend` in its dashboard, it auto-detects Vite. See `docs/PLAN.md` (Phase 8) for the full deploy sequence — note the two-step dependency: the backend's `FRONTEND_ORIGIN` can't be set to the real value until the frontend is deployed and has a URL, and the frontend's `VITE_API_URL` can't be set until the backend does.
+Live: backend at https://enter-hiring-platform.onrender.com (Render), frontend at https://enter-hiring-platform.vercel.app (Vercel, Root Directory `frontend`). Both auto-deploy on push to `main`.
+
+- `render.yaml` — Render Blueprint for the backend. Must include `plan: free` explicitly on the web service — Render's default plan when omitted is a paid tier, not free.
+- `frontend/vercel.json` — a catch-all rewrite (`/(.*) → /index.html`) required for a client-side-routed SPA on Vercel. Without it, any direct navigation or refresh on a non-root route (e.g. `/admin/login`) hits Vercel's static host directly and 404s instead of reaching React Router.
+- `DATABASE_URL` on Render (production) uses Supabase's **Session Pooler** connection string, not the direct connection — Supabase's direct Postgres host is IPv6-only, and Render has no outbound IPv6. Local dev keeps the direct connection (works fine from a normal dev machine). If `DATABASE_URL` in the Render environment ever gets reset to a direct `db.<ref>.supabase.co` host, expect every DB-touching endpoint to 500 in production while `/health` still returns 200 (health check doesn't touch the DB).
+- `FRONTEND_ORIGIN` (backend CORS) is a **single origin string**, not a list — `allow_origins=[settings.frontend_origin]` in `app/main.py` treats the whole env var value as one literal string to match. Don't put a comma-separated list in it.
 
 ## Secrets
 

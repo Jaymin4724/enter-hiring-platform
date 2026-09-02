@@ -107,7 +107,7 @@ Running summary of decisions made and phases completed. Detailed per-phase plans
 
 **Phase 7 is complete.**
 
-### Phase 8 — Deployment (in progress)
+### Phase 8 — Deployment
 
 - User created Render and Vercel accounts and connected GitHub, as planned.
 - **Fixed a real gap in `render.yaml`**: Render's web service `plan` field defaults to a paid tier (`0.5c-512mb`) when omitted, not free — this is what caused Render's Blueprint flow to prompt for a payment method. Added `plan: free` explicitly.
@@ -116,4 +116,13 @@ Running summary of decisions made and phases completed. Detailed per-phase plans
 - Live URLs recorded in `README.md`:
   - Frontend (public + admin): https://enter-hiring-platform.vercel.app/
   - Backend: https://enter-hiring-platform.onrender.com
-- **Still open**: confirm the Session Pooler `DATABASE_URL` fix is applied and `/jobs` returns 200; update Render's `FRONTEND_ORIGIN` from `localhost:5173` to the real Vercel URL above (CORS will otherwise reject the live frontend); then a full end-to-end check on the hosted links themselves.
+- Session Pooler `DATABASE_URL` fix confirmed: `/jobs` returns 200 with all 10 jobs.
+- **CORS mismatch, twice**: first, `FRONTEND_ORIGIN` was set to a comma-separated list of two origins (`http://localhost:5173, https://...vercel.app`) — but the backend's CORS middleware only supports a single origin string (`allow_origins=[settings.frontend_origin]` treats the whole value as one literal string), so neither origin matched. Fixed by setting it to just the single production Vercel URL (matches the app's existing single-origin design; no code change). Confirmed via `curl -H "Origin: ..."` that `access-control-allow-origin` now comes back correctly.
+- **Vercel SPA routing 404**: direct navigation to `/admin/login` (or any non-root route) returned Vercel's own 404, not our React app — Vercel's static host doesn't know to serve `index.html` for client-side routes unless told to. Fixed with `frontend/vercel.json`: `{"rewrites": [{"source": "/(.*)", "destination": "/index.html"}]}`, placed at the frontend project root (same level as `package.json`, since that's the configured Root Directory).
+- **Full end-to-end verification on the live, hosted links** (not localhost): submitted a real application on the hosted public page with an uploaded resume, confirmed it appeared correctly in the hosted admin dashboard (right job, stage `Applied`, working resume link), then cleaned up that test data directly against the shared production Supabase database (same DB local dev scripts already point at).
+- Live URLs, verified working:
+  - Public application page: https://enter-hiring-platform.vercel.app/
+  - Admin dashboard: https://enter-hiring-platform.vercel.app/admin/login
+  - Backend API: https://enter-hiring-platform.onrender.com
+
+**Phase 8 is complete.** Every deployment issue hit along the way (Render plan default, wrong start command, IPv6-only DB host, multi-origin CORS string, missing SPA rewrite) was a real, verified root cause — each one confirmed via an actual error message or a live header/response check, not guessed at.

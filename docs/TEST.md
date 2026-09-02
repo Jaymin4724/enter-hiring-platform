@@ -124,9 +124,10 @@ Manual, in-browser (verified against the 10 real seeded demo candidates):
 
 ### Phase 8 — Deployment
 Manual, against the hosted URLs:
-- [ ] Hosted backend responds on `/health`
-- [ ] Hosted frontend loads and reaches the hosted backend with no CORS errors
-- [ ] End-to-end: submit an application on the hosted public page, see it appear in the hosted admin dashboard
+- [x] Hosted backend responds on `/health` — `https://enter-hiring-platform.onrender.com/health`
+- [x] Hosted frontend loads and reaches the hosted backend with no CORS errors — confirmed via `access-control-allow-origin` header check and a real browser submission
+- [x] End-to-end: submit an application on the hosted public page, see it appear in the hosted admin dashboard — done with a real resume upload, verified in the live Candidates table, then cleaned up
+- [x] Direct navigation to a non-root route (e.g. `/admin/login`) works on the hosted frontend, not just client-side navigation from `/` — this was a real bug (Vercel SPA rewrite), now fixed and verified
 
 ### Phase 9 — Seed, QA & Submission
 - [ ] Full walkthrough of both flows on the hosted links, no console errors
