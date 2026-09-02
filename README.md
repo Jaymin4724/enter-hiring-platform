@@ -7,7 +7,11 @@ A candidate application + hiring management system, built for the **enter AI Ful
 
 ## Live links
 
-Not yet deployed — hosting (Vercel + Render) is next. A Render deploy blueprint (`render.yaml`) is already prepared; this section will be updated with the two working URLs once it's done.
+- **Public application page**: https://enter-hiring-platform.vercel.app/
+- **Admin dashboard**: https://enter-hiring-platform.vercel.app/admin/login
+- **Backend API**: https://enter-hiring-platform.onrender.com
+
+⚠️ Deployment is in progress — the backend is up but its database connection needs a fix (Supabase's direct connection is IPv6-only, Render is IPv4-only; switching to Supabase's Session Pooler connection string) before the site is actually usable end to end. This notice will be removed once verified working.
 
 ## Quick start (local)
 

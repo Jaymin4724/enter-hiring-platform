@@ -106,3 +106,14 @@ Running summary of decisions made and phases completed. Detailed per-phase plans
 - **Deployment prep**: added `render.yaml` at the repo root — a Render Blueprint defining the backend web service (root dir, build/start commands, and the list of required secret env vars marked `sync: false` so actual values are never committed, only entered once in the Render dashboard). Vercel needs no config file — it auto-detects Vite once Root Directory is set to `frontend` in its dashboard. Neither the Render nor Vercel CLI is installed locally, and account creation itself is the user's to do — deployment (Phase 8) still needs the user to sign up on both platforms and connect this GitHub repo before it can proceed.
 
 **Phase 7 is complete.**
+
+### Phase 8 — Deployment (in progress)
+
+- User created Render and Vercel accounts and connected GitHub, as planned.
+- **Fixed a real gap in `render.yaml`**: Render's web service `plan` field defaults to a paid tier (`0.5c-512mb`) when omitted, not free — this is what caused Render's Blueprint flow to prompt for a payment method. Added `plan: free` explicitly.
+- User ended up deploying via Render's manual "New Web Service" flow rather than the Blueprint (to sidestep the payment prompt while the fix above was in flight). This meant Render's own auto-detected default Start Command (`gunicorn your_application.wsgi`, a generic Django-style guess) was used instead of ours, causing `Exited with status 127: gunicorn: command not found`. Fixed by setting the Start Command manually in Render's dashboard to `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Backend now deploys and `/health` responds `200`.
+- **Backend `/jobs` (and everything else touching the DB) returns 500 in production**: Supabase's *direct* Postgres connection host resolves IPv6-only as of Supabase's 2024 IPv4 deprecation; Render (like Vercel, Railway, and most PaaS free tiers) has no outbound IPv6. Works fine locally (dev machine has IPv6) but fails from Render. Fix: swap `DATABASE_URL` on Render to Supabase's **Session Pooler** connection string (`postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`) — IPv4-compatible, and Session mode (not Transaction/6543) because Render runs a persistent process, not serverless functions, so it doesn't need Transaction mode's statement-pooling tradeoffs. Local `.env` is untouched (direct connection still works fine from a normal dev machine) — this is a production-only env var change.
+- Live URLs recorded in `README.md`:
+  - Frontend (public + admin): https://enter-hiring-platform.vercel.app/
+  - Backend: https://enter-hiring-platform.onrender.com
+- **Still open**: confirm the Session Pooler `DATABASE_URL` fix is applied and `/jobs` returns 200; update Render's `FRONTEND_ORIGIN` from `localhost:5173` to the real Vercel URL above (CORS will otherwise reject the live frontend); then a full end-to-end check on the hosted links themselves.
