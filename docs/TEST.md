@@ -55,11 +55,12 @@ Automated in `backend/tests/test_applications.py` (13 tests, all passing):
 - [x] Stage-update and resume-URL endpoints both return 401 without a token
 
 ### Phase 5 — Frontend: Public Application Page
-Manual, in-browser:
-- [ ] Job dropdown loads real jobs from the API
-- [ ] Submitting a valid application shows the success state
-- [ ] Missing/invalid field shows an inline validation error, not a silent failure
-- [ ] Resume upload works end to end — file shows up in Storage and is linked from the admin dashboard afterward
+Manual, in-browser (via claude-in-chrome):
+- [x] Job dropdown loads real jobs from the API — confirmed all 10 seeded jobs appear
+- [x] Submitting a valid application shows the success state — confirmed, and cross-checked the row landed correctly via `GET /applications` (right job, stage `Applied`, resume path set)
+- [x] Missing/invalid field shows an inline validation error, not a silent failure — confirmed empty-submit shows all 4 required-field errors, no request sent
+- [x] Resume upload works end to end — file uploaded via the dropzone, submitted, and verified present via the admin API (cleaned up afterward as test data)
+- [ ] True small-viewport (mobile) check — window resize in this environment didn't reliably narrow the render viewport, so this is unverified by screenshot. The responsive Tailwind classes (`grid-cols-1 sm:grid-cols-2`, `max-w-xl`, `px-4`) are standard and compiled correctly, but treat this as still open until checked on an actual narrow device/emulator.
 
 ### Phase 6 — Frontend: Admin Dashboard (Login & Jobs)
 Manual, in-browser:

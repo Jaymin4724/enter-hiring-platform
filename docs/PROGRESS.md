@@ -53,3 +53,22 @@ Running summary of decisions made and phases completed. Detailed per-phase plans
 - Testing: `backend/tests/test_applications.py`, 13 tests, all passing — covers valid submit, every validation failure path (missing field, bad email, bad phone, unknown job, bad file type), auth-gating on all three admin endpoints, job/stage filtering, and every one of the 9 stage values accepted plus an invalid one rejected. Full suite is now 22 tests, all green. Test applications clean up their own DB rows via a fixture teardown (resume files in Storage are not cleaned up per test — acceptable for a 24h build, noted here rather than silently left undocumented).
 
 **Phase 4 is complete.**
+
+### Phase 5 — Frontend: Public Application Page
+
+- **UI/UX direction locked in with the user**: candidate form modeled on Ashby/Greenhouse (centered single-column card, drag-and-drop resume dropzone, inline validation), admin dashboard (Phase 6/7) modeled on Linear (dense table, stage pills, inline editing) — confirmed via `AskUserQuestion` before building.
+- Installed the `ui-ux-pro-max` plugin (user ran `/plugin install ui-ux-pro-max@ui-ux-pro-max-skill`) and used its `ui-ux-pro-max` skill to pull concrete design specs: style, color palette, and font pairing recommendations for an ATS/job-platform product, plus UX guidelines for file-upload forms and data tables.
+- **Design decision**: simplified the skill's two separate recommendations (teal for the candidate form, blue for admin) into **one unified palette** across both surfaces — primary blue `#2563EB`, accent emerald `#059669` (positive/Approved), destructive red `#DC2626` (all Reject variants), Inter font throughout. Rationale: one cohesive system is simpler to build and matches the assignment's explicit "keep it simple" brief; the CRM-style palette match already maps naturally onto the 9 hiring stages (neutral → blue → indigo → violet → green, red for every reject).
+- Stack: Tailwind CSS v4 (`@tailwindcss/vite` plugin) + shadcn/ui (Radix base, Nova preset, then reworked to our own tokens) — confirmed with the user before installing.
+- `frontend/src/index.css` — Tailwind + Inter import + full design-token set (`--primary`, `--accent`, `--destructive`, etc. plus custom `--color-stage-*` pill tokens for the 9 stages). Removed the Vite-template default styling and unused assets (`App.css`, `react.svg`, `vite.svg`, `hero.png`, `icons.svg`).
+- `frontend/vite.config.js` — added `@tailwindcss/vite` plugin and the `@/*` → `src/*` path alias (`jsconfig.json`); used `import.meta.dirname` (not `__dirname`) per a real deprecation warning Vite's native config loader surfaced during the build.
+- Fixed a real Lightning CSS warning: the Google Fonts `@import` had to be moved before `@import "tailwindcss"` — CSS requires all `@import`s to precede other rules, and Tailwind's own import expands into non-import content.
+- shadcn components added: `button`, `input`, `label`, `textarea`, `select`, `card`.
+- `frontend/src/lib/api.js` — `getJobs()`, `submitApplication(formData)`, with backend error-detail parsing (including FastAPI's array-of-validation-errors shape).
+- `frontend/src/components/ResumeDropzone.jsx` — custom drag-and-drop resume upload (no shadcn primitive for this): shows filename + size + remove once a file is selected.
+- `frontend/src/pages/ApplyPage.jsx` — full working page: job dropdown (loaded from `GET /jobs`), Name/Phone/Email/Resume/Note fields, client-side validation mirroring the backend's rules (required fields, email/phone pattern, resume type/size), loading state on submit, inline field errors, and a real success screen replacing the form on submit — matches `docs/PRODUCT_VISION.md`.
+- Verified live in the browser (claude-in-chrome): all 10 jobs load in the dropdown; empty-submit shows all 4 inline validation errors with no network call; a full valid submission (with an actual uploaded file) succeeded and was cross-checked via `GET /applications` — correct job, stage `Applied`, resume path set. Test application and its resume file were deleted afterward to keep the dev DB clean.
+- `frontend/.env` created locally (`VITE_API_URL=http://localhost:8000`).
+- Not yet verified: true small-viewport/mobile rendering (see `docs/TEST.md` — the sandbox's window-resize tool didn't reliably narrow the viewport for a screenshot check).
+
+**Phase 5 is complete**, except the mobile-viewport check noted above.

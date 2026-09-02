@@ -21,9 +21,13 @@ Full spec, product vision, phase roadmap, current-phase plan, and decision log a
 ## Stack
 
 - Backend: Python, FastAPI (`backend/`)
-- Frontend: React + Vite (`frontend/`)
+- Frontend: React + Vite, Tailwind CSS v4, shadcn/ui (Radix base) (`frontend/`)
 - Database + file storage: Supabase (Postgres + Storage)
 - Hosting: frontend → Vercel, backend → Render, data → Supabase
+
+## Design system
+
+One unified palette across both the public and admin surfaces (not two different ones) — see `docs/PROGRESS.md` Phase 5 for the rationale. Tokens live in `frontend/src/index.css` as CSS variables (`--primary`, `--accent`, `--destructive`, `--muted`, etc., mapped into Tailwind via `@theme inline`) plus custom `--color-stage-*` tokens for the 9 hiring-pipeline stages (neutral → blue → indigo → violet → green progression, red for every Reject variant). Font is Inter throughout. When building admin UI (stage pills, filters), reuse the `--color-stage-*` tokens rather than inventing new colors per stage.
 
 ## Commands
 
@@ -44,11 +48,13 @@ No linter configured yet.
 ### Frontend (`frontend/`)
 ```
 npm install
+cp .env.example .env   # VITE_API_URL, defaults to http://localhost:8000
 npm run dev        # Vite dev server
 npm run build       # production build
 npm run lint         # oxlint
 npm run preview
 ```
+Adding a shadcn/ui component: `npx shadcn@latest add <component>` (writes to `src/components/ui/`). No automated frontend test suite — verified manually per `docs/TEST.md`.
 
 ## Architecture
 
@@ -64,11 +70,16 @@ When adding a resource, follow this same split rather than putting logic directl
 Data access is direct to the Supabase Postgres instance via `DATABASE_URL` (SQLAlchemy/psycopg2), not through the Supabase REST client — the `supabase` Python package is used for Storage (resume uploads) and any auth-adjacent calls, not as the primary DB layer.
 
 **Frontend** (`frontend/src/`) is a single Vite React app covering both public and admin surfaces, split by route in `App.jsx` via `react-router-dom`:
-- `/` → `pages/ApplyPage.jsx` — public application form.
-- `/admin/login` → `pages/AdminLogin.jsx`.
-- `/admin` → `pages/AdminDashboard.jsx` — jobs + candidates management.
+- `/` → `pages/ApplyPage.jsx` — public application form. Fully working: loads jobs from `GET /jobs`, submits to `POST /applications` via `lib/api.js`, client-side validation mirrors the backend's rules.
+- `/admin/login` → `pages/AdminLogin.jsx` — placeholder, not built yet (Phase 6).
+- `/admin` → `pages/AdminDashboard.jsx` — placeholder, not built yet (Phase 6/7).
 
 There is one frontend origin and one backend origin — the admin dashboard is not a separate deployable app, just routes gated behind the login flow once auth is implemented.
+
+- `lib/api.js` — fetch wrapper (`getJobs`, `submitApplication`), reads `VITE_API_URL`, parses FastAPI's error-detail shape (including validation-error arrays) into a plain message.
+- `lib/utils.js` — shadcn's `cn()` helper (clsx + tailwind-merge).
+- `components/ui/` — shadcn-generated primitives (`button`, `input`, `label`, `textarea`, `select`, `card` so far). Add more via `npx shadcn@latest add <name>`, don't hand-write these.
+- `components/` (non-`ui/`) — hand-built, product-specific components, e.g. `ResumeDropzone.jsx` (drag-and-drop file upload; shadcn has no primitive for this).
 
 ## Secrets
 
