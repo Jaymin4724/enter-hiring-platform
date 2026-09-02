@@ -7,7 +7,7 @@ A candidate application + hiring management system, built for the **enter AI Ful
 
 ## Live links
 
-Not yet deployed — hosting (Vercel + Render) is the next phase. This section will be updated with working URLs once that's done.
+Not yet deployed — hosting (Vercel + Render) is next. A Render deploy blueprint (`render.yaml`) is already prepared; this section will be updated with the two working URLs once it's done.
 
 ## Quick start (local)
 
@@ -66,9 +66,9 @@ One React app serves both surfaces (routed, not two separate deployables); one F
 - ✅ Public application form — job dropdown, all required fields, resume upload, full client+server validation, real success state.
 - ✅ Admin login, protected routing.
 - ✅ Admin jobs management — full create/edit/delete, mobile-friendly table.
+- ✅ Admin candidates view — every field, job + stage filters (individually and combined), inline stage changes across all 9 pipeline stages, resume access via signed URLs.
 - ✅ Backend — every endpoint the assignment asks for, JWT-protected where it should be, 36 automated tests passing.
-- 🚧 Admin candidates view (filtering, stage changes) — in progress.
-- 🚧 Hosting/deployment — not started yet.
+- 🚧 Hosting/deployment — not started yet (deploy blueprint is ready, see `render.yaml`).
 
 ## Testing
 

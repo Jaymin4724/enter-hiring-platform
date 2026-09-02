@@ -43,7 +43,7 @@ Every rule below is enforced **server-side** (the real source of truth) and **mi
 | Check | Server | Client |
 |---|---|---|
 | Wrong password / unknown email → 401, generic message (no user enumeration) | ✅ | ✅ shown inline on the login form |
-| Stage value must be one of the 9 valid stages (`PATCH /applications/{id}/stage`) | ✅ `schemas/application.py` | N/A — no UI yet, Phase 7 |
+| Stage value must be one of the 9 valid stages (`PATCH /applications/{id}/stage`) | ✅ `schemas/application.py` | ✅ the row Select in `CandidatesPage.jsx` only ever offers the 9 valid values, no free text |
 
 ## Phase-by-phase requirements
 
@@ -114,11 +114,13 @@ Manual, in-browser:
 - [x] Edit/Delete icon buttons are touch-target sized (40x40px, up from shadcn's 32px default)
 
 ### Phase 7 — Frontend: Admin Dashboard (Candidates)
-Manual, in-browser:
-- [ ] Candidates table shows every field captured on the public form
-- [ ] Job filter and stage filter work individually and combined
-- [ ] Changing a candidate's stage in the row persists after a page reload
-- [ ] Resume link/download works from the row
+Manual, in-browser (verified against the 10 real seeded demo candidates):
+- [x] Candidates table shows every field captured on the public form (name, email, phone, job, stage, applied date, resume)
+- [x] Job filter and stage filter work individually and combined — e.g. stage=R2 alone returned exactly the 2 matching candidates; job=QA Engineer + stage=R2 combined narrowed to exactly 1
+- [x] Changing a candidate's stage in the row persists after a page reload — verified on a real candidate, then reverted to its original seeded value afterward (no lasting data change)
+- [x] Resume link/download works from the row — opens a real, working signed Supabase Storage URL in a new tab
+- [x] Mobile-friendly: same `overflow-x-auto` table pattern as `JobsPage.jsx`, no new fixed-width containers introduced
+- [x] Navigation convenience: "Admin login" link on the public page, "Back to Home" on the login screen, "Home" button in the admin nav — all verified working
 
 ### Phase 8 — Deployment
 Manual, against the hosted URLs:

@@ -78,16 +78,23 @@ Data access is direct to the Supabase Postgres instance via `DATABASE_URL` (SQLA
 - `/admin/login` → `pages/AdminLogin.jsx` — working login, calls `lib/api.js`'s `login()`, stores the token via `lib/auth.js`.
 - `/admin` → guarded by `components/RequireAuth.jsx` (redirects to `/admin/login` if no token), renders `pages/AdminDashboard.jsx` as a layout (top nav + `<Outlet />`) with nested routes:
   - `/admin/jobs` → `pages/admin/JobsPage.jsx` — fully working jobs CRUD (table, `Sheet` slide-over for create/edit, `AlertDialog` for delete).
-  - `/admin/candidates` → `pages/admin/CandidatesPage.jsx` — stub, not built yet (Phase 7).
+  - `/admin/candidates` → `pages/admin/CandidatesPage.jsx` — fully working: job/stage filters, per-row stage change (the pill *is* the `Select`, styled via `lib/stages.js`'s `stageBadgeClass`), resume links fetched lazily on click via a signed URL.
+
+Small nav conveniences (explicitly requested, not in the original spec): an "Admin login" link on `ApplyPage`, "Back to Home" on `AdminLogin`, and a "Home" button in the admin top nav — plain `react-router` `Link`s, nothing fancier.
 
 There is one frontend origin and one backend origin — the admin dashboard is not a separate deployable app, just routes gated behind the login flow.
 
-- `lib/api.js` — fetch wrapper built around a shared `request()` helper; admin calls pass `auth: true` to attach the bearer token automatically. `getJobs`, `submitApplication`, `login`, `createJob`, `updateJob`, `deleteJob` so far. Parses FastAPI's error-detail shape (including validation-error arrays) into a plain message.
+- `lib/api.js` — fetch wrapper built around a shared `request()` helper; admin calls pass `auth: true` to attach the bearer token automatically. `getJobs`, `submitApplication`, `login`, `createJob`, `updateJob`, `deleteJob`, `getApplications`, `updateApplicationStage`, `getResumeUrl`. Parses FastAPI's error-detail shape (including validation-error arrays) into a plain message.
 - `lib/auth.js` — token storage (`localStorage` — acceptable for this internal tool; the public page never touches it). `getToken`/`setToken`/`clearToken`/`isAuthenticated`.
+- `lib/stages.js` — frontend's single source of truth for the 9 hiring stages (must match `backend/app/models/application.py`'s `STAGES` exactly) plus `stageBadgeClass(stage)` mapping a stage to its `--color-stage-*` token pair. Use this anywhere a stage needs to be listed or colored — don't redeclare the stage list or hardcode colors elsewhere.
 - `lib/utils.js` — shadcn's `cn()` helper (clsx + tailwind-merge).
 - `components/ui/` — shadcn-generated primitives (`button`, `input`, `label`, `textarea`, `select`, `card`, `table`, `badge`, `sheet`, `alert-dialog` so far). Add more via `npx shadcn@latest add <name>`, don't hand-write these. Note: shadcn's `Table` already wraps itself in `overflow-x-auto` — don't add another wrapper.
 - `components/` (non-`ui/`) — hand-built, product-specific components: `ResumeDropzone.jsx` (drag-and-drop file upload; shadcn has no primitive for this), `RequireAuth.jsx` (route guard).
 - Touch targets: admin row action buttons are `h-10 w-10` (40px) rather than shadcn's smaller default icon-button size — keep new icon-only buttons at least that size.
+
+## Deployment
+
+`render.yaml` at the repo root is a Render Blueprint for the backend (root dir `backend`, build/start commands, required env vars listed with `sync: false` so secrets are entered once in the Render dashboard, never committed). Vercel needs no config file for the frontend — set Root Directory to `frontend` in its dashboard, it auto-detects Vite. See `docs/PLAN.md` (Phase 8) for the full deploy sequence — note the two-step dependency: the backend's `FRONTEND_ORIGIN` can't be set to the real value until the frontend is deployed and has a URL, and the frontend's `VITE_API_URL` can't be set until the backend does.
 
 ## Secrets
 

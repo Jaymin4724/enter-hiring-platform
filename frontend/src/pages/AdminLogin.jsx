@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -34,6 +34,13 @@ export default function AdminLogin() {
     <main className="flex min-h-dvh items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
+          <Link
+            to="/"
+            className="mb-1 inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </Link>
           <h1 className="text-xl font-semibold text-foreground">Admin login</h1>
           <p className="text-sm text-muted-foreground">Sign in to manage jobs and candidates.</p>
         </CardHeader>

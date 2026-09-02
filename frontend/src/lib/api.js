@@ -61,3 +61,19 @@ export async function deleteJob(id) {
 export async function submitApplication(formData) {
   return request('/applications', { method: 'POST', body: formData })
 }
+
+export async function getApplications({ jobId, stage } = {}) {
+  const params = new URLSearchParams()
+  if (jobId) params.set('job_id', jobId)
+  if (stage) params.set('stage', stage)
+  const query = params.toString()
+  return request(`/applications${query ? `?${query}` : ''}`, { auth: true })
+}
+
+export async function updateApplicationStage(id, stage) {
+  return request(`/applications/${id}/stage`, { method: 'PATCH', json: { stage }, auth: true })
+}
+
+export async function getResumeUrl(id) {
+  return request(`/applications/${id}/resume`, { auth: true })
+}

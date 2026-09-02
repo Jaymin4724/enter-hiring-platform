@@ -1,5 +1,5 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LogOut } from 'lucide-react'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Home, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { clearToken } from '@/lib/auth'
 
@@ -31,10 +31,18 @@ export default function AdminDashboard() {
               </NavLink>
             </nav>
           </div>
-          <Button type="button" variant="ghost" className="h-10 gap-1.5 px-3" onClick={handleLogout}>
-            <LogOut className="h-4 w-4" />
-            Log out
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button type="button" variant="ghost" className="h-10 gap-1.5 px-3" asChild>
+              <Link to="/">
+                <Home className="h-4 w-4" />
+                Home
+              </Link>
+            </Button>
+            <Button type="button" variant="ghost" className="h-10 gap-1.5 px-3" onClick={handleLogout}>
+              <LogOut className="h-4 w-4" />
+              Log out
+            </Button>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">

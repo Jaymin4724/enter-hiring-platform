@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -104,7 +105,13 @@ export default function ApplyPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-start justify-center bg-background px-4 py-10 sm:py-16">
+    <main className="relative flex min-h-dvh items-start justify-center bg-background px-4 py-10 sm:py-16">
+      <Link
+        to="/admin/login"
+        className="absolute right-4 top-4 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+      >
+        Admin login
+      </Link>
       <Card className="w-full max-w-xl">
         <CardHeader>
           <h1 className="text-2xl font-semibold text-foreground">Apply for a job at enter</h1>
