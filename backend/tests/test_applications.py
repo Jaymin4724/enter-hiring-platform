@@ -81,6 +81,37 @@ def test_submit_invalid_phone(client, sample_job_id, created_application_ids):
     assert resp.status_code == 422
 
 
+def test_submit_rejects_whitespace_only_name(client, sample_job_id, created_application_ids):
+    resp = _submit(client, sample_job_id, created_application_ids, name="   ")
+    assert resp.status_code == 422
+
+
+def test_submit_rejects_name_over_max_length(client, sample_job_id, created_application_ids):
+    resp = _submit(client, sample_job_id, created_application_ids, name="A" * 201)
+    assert resp.status_code == 422
+
+
+def test_submit_rejects_note_over_max_length(client, sample_job_id, created_application_ids):
+    resp = _submit(client, sample_job_id, created_application_ids, note="A" * 2001)
+    assert resp.status_code == 422
+
+
+def test_submit_trims_whitespace(client, sample_job_id, created_application_ids):
+    resp = _submit(
+        client,
+        sample_job_id,
+        created_application_ids,
+        name="  Test Candidate  ",
+        phone="  +91 98765 43210  ",
+        email="  candidate@example.com  ",
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["name"] == "Test Candidate"
+    assert body["phone"] == "+91 98765 43210"
+    assert body["email"] == "candidate@example.com"
+
+
 def test_submit_unknown_job(client, created_application_ids):
     resp = _submit(client, NIL_UUID, created_application_ids)
     assert resp.status_code == 404

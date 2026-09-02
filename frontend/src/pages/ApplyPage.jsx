@@ -17,6 +17,8 @@ const ALLOWED_RESUME_TYPES = [
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]
 const MAX_RESUME_SIZE = 5 * 1024 * 1024
+const NAME_MAX_LENGTH = 200
+const NOTE_MAX_LENGTH = 2000
 
 function jobLabel(job) {
   const parts = [job.department, job.location].filter(Boolean)
@@ -48,6 +50,7 @@ export default function ApplyPage() {
   function validate() {
     const next = {}
     if (!name.trim()) next.name = 'Name is required.'
+    else if (name.trim().length > NAME_MAX_LENGTH) next.name = `Name must be ${NAME_MAX_LENGTH} characters or fewer.`
     if (!phone.trim()) next.phone = 'Phone number is required.'
     else if (!PHONE_PATTERN.test(phone.trim())) next.phone = 'Enter a valid phone number.'
     if (!email.trim()) next.email = 'Email is required.'
@@ -56,6 +59,7 @@ export default function ApplyPage() {
     if (!resume) next.resume = 'Attach your resume.'
     else if (!ALLOWED_RESUME_TYPES.includes(resume.type)) next.resume = 'Resume must be a PDF, DOC, or DOCX file.'
     else if (resume.size > MAX_RESUME_SIZE) next.resume = 'Resume must be 5MB or smaller.'
+    if (note.trim().length > NOTE_MAX_LENGTH) next.note = `Note must be ${NOTE_MAX_LENGTH} characters or fewer.`
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -85,7 +89,7 @@ export default function ApplyPage() {
 
   if (submitted) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background px-4">
+      <main className="flex min-h-dvh items-center justify-center bg-background px-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <CheckCircle2 className="h-12 w-12 text-accent" />
@@ -100,7 +104,7 @@ export default function ApplyPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-start justify-center bg-background px-4 py-10 sm:py-16">
+    <main className="flex min-h-dvh items-start justify-center bg-background px-4 py-10 sm:py-16">
       <Card className="w-full max-w-xl">
         <CardHeader>
           <h1 className="text-2xl font-semibold text-foreground">Apply for a job at enter</h1>
@@ -128,7 +132,13 @@ export default function ApplyPage() {
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="name">Name</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} aria-invalid={!!errors.name} />
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                aria-invalid={!!errors.name}
+                maxLength={NAME_MAX_LENGTH}
+              />
               {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
             </div>
 
@@ -165,7 +175,15 @@ export default function ApplyPage() {
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="note">A brief note (optional)</Label>
-              <Textarea id="note" rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
+              <Textarea
+                id="note"
+                rows={4}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                aria-invalid={!!errors.note}
+                maxLength={NOTE_MAX_LENGTH}
+              />
+              {errors.note && <p className="text-sm text-destructive">{errors.note}</p>}
             </div>
 
             {submitError && (

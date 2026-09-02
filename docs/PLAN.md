@@ -2,33 +2,28 @@
 
 Detailed plan for the **current phase only**. Replaced entirely when this phase is done — see `docs/ROADMAP.md` for the full phase list, `docs/PROGRESS.md` for what's already done, and `docs/TEST.md` for the test checklist this phase must satisfy before it's marked complete.
 
-## Phase 6 — Frontend: Admin Dashboard (Login & Jobs)
+## Phase 7 — Frontend: Admin Dashboard (Candidates)
 
 ### Goal
-A working login screen and a jobs management UI, styled per the Linear-inspired admin direction agreed in Phase 5 (dense, one accent color, inline editing — reusing the design tokens already in `frontend/src/index.css`).
+The admin can see every candidate who applied, across all jobs, with every field captured on the public form — filter by job and stage, open the resume, and move someone through the pipeline right from the table. This is the last piece before deployment; the 10 real demo candidates seeded in Phase 6 (`backend/seed_demo_candidates.py`) make this phase demoable with realistic data from the start.
 
 ### Tasks
 
-- [ ] `frontend/src/lib/auth.js` — store/read the JWT (localStorage is fine here — it's an internal tool, not the public page), `login(email, password)` calling `POST /auth/login`, `logout()`, `getToken()`
-- [ ] Update `frontend/src/lib/api.js` — attach `Authorization: Bearer <token>` to admin-only calls; add `createJob`, `updateJob`, `deleteJob`
-- [ ] Add shadcn components needed: `table`, `badge`, `dialog` (or `sheet` for the slide-over per `docs/PRODUCT_VISION.md`), `dropdown-menu`, `form` (or hand-rolled — match the pattern already used in `ApplyPage.jsx`)
-- [ ] `pages/AdminLogin.jsx` — email + password form, calls `login()`, redirects to `/admin` on success, shows an inline error on 401
-- [ ] A route guard (e.g. `components/RequireAuth.jsx`) wrapping `/admin` — redirects to `/admin/login` if no token
-- [ ] `pages/AdminDashboard.jsx` — top nav (Jobs / Candidates tabs — Candidates tab is a Phase 7 stub for now), logout button
-- [ ] Jobs view:
-  - [ ] Table: title, department, location, created date, edit/delete actions per row
-  - [ ] "Add job" opens a slide-over/dialog with title/department/location/description fields → `POST /jobs`
-  - [ ] Edit reuses the same form, prefilled → `PUT /jobs/{id}`
-  - [ ] Delete asks for confirmation, then `DELETE /jobs/{id}`
-  - [ ] List refreshes after create/edit/delete (refetch or optimistic update)
+- [ ] `frontend/src/lib/api.js` — add `getApplications({ jobId, stage })` (query params), `updateApplicationStage(id, stage)`, `getResumeUrl(id)`
+- [ ] `frontend/src/pages/admin/CandidatesPage.jsx` — replace the stub with the real view:
+  - [ ] Table: Name, Email, Phone, Job title, Stage (as a colored `Badge` using the existing `--color-stage-*` tokens from `frontend/src/index.css` — reuse them, don't invent new colors), Applied date, Resume link
+  - [ ] Job filter + Stage filter (shadcn `Select`s) above the table, both optional and combinable — re-fetch (or client-filter, if the candidate list is small enough that it's simpler) when either changes
+  - [ ] Stage change inline in the row — a `Select` per row calling `updateApplicationStage`, no separate edit screen, per `docs/PRODUCT_VISION.md`
+  - [ ] Resume link opens the signed URL from `getResumeUrl` in a new tab
+  - [ ] Loading/empty/error states, mobile-friendly table (same `overflow-x-auto` pattern already proven in `JobsPage.jsx`)
+- [ ] Verify in the browser: filters work individually and combined, a stage change persists after reload, resume link actually opens the PDF
 
-### Manual test pass (check off in `docs/TEST.md` Phase 6 when done)
-- [ ] Wrong credentials show an error on the login screen
-- [ ] Correct credentials reach the dashboard
-- [ ] Visiting `/admin` while logged out redirects to `/admin/login`
-- [ ] Create/edit/delete a job from the UI is reflected immediately in the list
+### Manual test pass (check off in `docs/TEST.md` Phase 7 when done)
+- [ ] Candidates table shows every field captured on the public form
+- [ ] Job filter and stage filter work individually and combined
+- [ ] Changing a candidate's stage in the row persists after a page reload
+- [ ] Resume link/download works from the row
 
 ### Exit criteria
-- An admin can log in, land on the dashboard, and fully manage jobs from the browser — no more curl/Swagger needed for job management.
-- The 10 seeded jobs are still intact after this phase's manual testing (clean up any test jobs created during verification).
-- No candidates UI yet — that's Phase 7.
+- All Phase 7 boxes in `docs/TEST.md` are checked.
+- The full candidate-facing and admin-facing product now works end to end locally — deployment (Phase 8) is the only thing left before submission.

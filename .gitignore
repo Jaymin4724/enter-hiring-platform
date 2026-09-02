@@ -4,6 +4,7 @@ backend/.venv/
 backend/__pycache__/
 **/__pycache__/
 *.pyc
+backend/seed_data/
 
 # Node
 frontend/node_modules/
@@ -22,3 +23,6 @@ Thumbs.db
 # Editors
 .vscode/
 .idea/
+
+# Claude Code session state
+.claude/scheduled_tasks.lock

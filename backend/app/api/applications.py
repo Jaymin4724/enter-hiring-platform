@@ -15,6 +15,8 @@ from app.services.storage import InvalidResumeError, get_resume_signed_url, uplo
 router = APIRouter(prefix="/applications", tags=["applications"])
 
 PHONE_PATTERN = re.compile(r"^\+?[0-9 ()-]{7,20}$")
+NAME_MAX_LENGTH = 200
+NOTE_MAX_LENGTH = 2000
 
 
 def _get_application_or_404(application_id: uuid.UUID, db: Session) -> Application:
@@ -37,6 +39,21 @@ def submit_application(
     if not db.get(Job, job_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
 
+    name = name.strip()
+    phone = phone.strip()
+    email = email.strip()
+    note = note.strip() if note else None
+    if note == "":
+        note = None
+
+    if not name:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Name is required.")
+    if len(name) > NAME_MAX_LENGTH:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Name must be {NAME_MAX_LENGTH} characters or fewer.",
+        )
+
     try:
         validate_email(email, check_deliverability=False)
     except EmailNotValidError:
@@ -44,6 +61,12 @@ def submit_application(
 
     if not PHONE_PATTERN.match(phone):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Invalid phone number")
+
+    if note and len(note) > NOTE_MAX_LENGTH:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Note must be {NOTE_MAX_LENGTH} characters or fewer.",
+        )
 
     application_id = uuid.uuid4()
     try:

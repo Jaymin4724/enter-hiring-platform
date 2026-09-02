@@ -14,6 +14,37 @@ What gets tested, phase by phase. Checked and updated as each phase in `docs/ROA
 - **Frontend**: no automated test suite planned given the timeline. Each frontend phase is verified manually in the browser — checklist items below are marked off by hand, not by a runner.
 - A phase isn't "done" in `docs/PROGRESS.md` until the tests below for that phase pass (automated ones actually run green; manual ones actually clicked through).
 
+## Validation checklist (client + admin)
+
+Every rule below is enforced **server-side** (the real source of truth) and **mirrored client-side** (fast feedback, no round trip for the obvious cases). Server-side is what the automated tests in Phase 3/4/6 above actually check; client-side is verified manually in the browser.
+
+### Client side — public application form (`POST /applications`)
+
+| Field | Rule | Server (backend) | Client (`ApplyPage.jsx`) |
+|---|---|---|---|
+| Name | required, non-blank after trim, ≤200 chars | ✅ `app/api/applications.py` | ✅ `validate()` + `maxLength={200}` |
+| Phone | required, matches `^\+?[0-9 ()-]{7,20}$` | ✅ | ✅ same pattern |
+| Email | required, valid format (`email_validator`) | ✅ | ✅ regex mirror |
+| Job | required, must reference an existing job (404 if not) | ✅ | ✅ dropdown only offers real jobs |
+| Resume | required, PDF/DOC/DOCX only, ≤5MB | ✅ `services/storage.py` | ✅ dropzone + `validate()` |
+| Note | optional, ≤2000 chars | ✅ | ✅ `maxLength={2000}` |
+
+### Admin side — jobs management (`POST /jobs`, `PUT /jobs/{id}`)
+
+| Field | Rule | Server (backend) | Client (`admin/JobsPage.jsx`) |
+|---|---|---|---|
+| Title | required, non-blank after trim, ≤200 chars | ✅ `schemas/job.py` (`JobWrite`) | ✅ inline error + `maxLength={200}` |
+| Department | optional, ≤120 chars | ✅ | ✅ `maxLength={120}` |
+| Location | optional, ≤120 chars | ✅ | ✅ `maxLength={120}` |
+| Description | optional, ≤5000 chars (DB column is unbounded `Text`, capped anyway) | ✅ | ✅ `maxLength={5000}` |
+
+### Admin side — login (`POST /auth/login`)
+
+| Check | Server | Client |
+|---|---|---|
+| Wrong password / unknown email → 401, generic message (no user enumeration) | ✅ | ✅ shown inline on the login form |
+| Stage value must be one of the 9 valid stages (`PATCH /applications/{id}/stage`) | ✅ `schemas/application.py` | N/A — no UI yet, Phase 7 |
+
 ## Phase-by-phase requirements
 
 ### Phase 1 — Scaffolding
@@ -28,7 +59,7 @@ One-off bootstrap scripts, not runtime code paths — verified manually, not cov
 - [x] Manual: seed produces exactly 10 jobs and 1 admin, no duplicates on re-run
 
 ### Phase 3 — Backend API: Auth & Jobs
-Automated in `backend/tests/test_auth.py`, `backend/tests/test_jobs.py`:
+Automated in `backend/tests/test_auth.py`, `backend/tests/test_jobs.py` (17 tests, all passing):
 - [x] `POST /auth/login` succeeds with the seeded admin credentials, returns a bearer token
 - [x] `POST /auth/login` returns 401 on wrong password
 - [x] `POST /auth/login` returns 401 on unknown email
@@ -37,9 +68,16 @@ Automated in `backend/tests/test_auth.py`, `backend/tests/test_jobs.py`:
 - [x] `PUT /jobs/{id}` returns 401 without a token
 - [x] `DELETE /jobs/{id}` returns 401 without a token
 - [x] Full authenticated lifecycle: create a job → it appears in `GET /jobs` → update it → delete it → it's gone from `GET /jobs`
+- [x] Create/update rejects a blank (whitespace-only) title
+- [x] Create/update rejects a title over 200 characters
+- [x] Create rejects a department over 120 characters
+- [x] Create rejects a location over 120 characters
+- [x] Create rejects a description over 5000 characters
+- [x] Create/update trims surrounding whitespace from title/department/location before storing
+- [x] Create succeeds with only a title (department/location/description all optional)
 
 ### Phase 4 — Backend API: Applications
-Automated in `backend/tests/test_applications.py` (13 tests, all passing):
+Automated in `backend/tests/test_applications.py` (17 tests, all passing):
 - [x] Public submit-application endpoint accepts a valid payload + resume file, stage defaults to `"Applied"`
 - [x] Submit rejects a missing required field
 - [x] Submit rejects an invalid email format
@@ -53,6 +91,10 @@ Automated in `backend/tests/test_applications.py` (13 tests, all passing):
 - [x] Stage-update endpoint accepts every value in the 9-stage list and persists it
 - [x] Stage-update endpoint rejects a value outside the 9-stage list
 - [x] Stage-update and resume-URL endpoints both return 401 without a token
+- [x] Submit rejects a whitespace-only name
+- [x] Submit rejects a name over 200 characters
+- [x] Submit rejects a note over 2000 characters
+- [x] Submit trims surrounding whitespace from name/phone/email before storing
 
 ### Phase 5 — Frontend: Public Application Page
 Manual, in-browser (via claude-in-chrome):
@@ -64,10 +106,12 @@ Manual, in-browser (via claude-in-chrome):
 
 ### Phase 6 — Frontend: Admin Dashboard (Login & Jobs)
 Manual, in-browser:
-- [ ] Wrong credentials show an error on the login screen
-- [ ] Correct credentials reach the dashboard
-- [ ] Visiting `/admin` while logged out redirects to `/admin/login`
-- [ ] Create/edit/delete a job from the UI is reflected immediately in the list
+- [x] Wrong credentials show an error on the login screen
+- [x] Correct credentials reach the dashboard
+- [x] Visiting `/admin` while logged out redirects to `/admin/login`
+- [x] Create/edit/delete a job from the UI is reflected immediately in the list — verified with a real test job, cleaned up, confirmed no leftovers via a direct API check
+- [x] Jobs table scrolls horizontally on narrow screens instead of breaking layout (shadcn `Table` wraps itself in `overflow-x-auto` — confirmed by reading the component)
+- [x] Edit/Delete icon buttons are touch-target sized (40x40px, up from shadcn's 32px default)
 
 ### Phase 7 — Frontend: Admin Dashboard (Candidates)
 Manual, in-browser:

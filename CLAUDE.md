@@ -9,6 +9,8 @@ A candidate application and hiring management system ("enter" — AI Fullstack I
 - **Public application page** — no login, candidates apply to a job picked from a dropdown.
 - **Admin dashboard** — `admin@enter.in` login only, manages jobs and moves applications through a fixed hiring pipeline (Applied → R1/R1 Reject → R2/R2 Reject → R3/R3 Reject → Approved, or Reject at any point).
 
+`README.md` at the repo root is the interviewer-facing overview (stack + why, architecture, key decisions, how to run it, live links once deployed) — keep it in sync whenever a decision or the project's state changes, same as this file.
+
 Full spec, product vision, phase roadmap, current-phase plan, and decision log all live in `docs/` — read them before making product or architecture decisions:
 
 - `docs/REQUIREMENTS.md` — the assignment spec, translated into requirements.
@@ -45,6 +47,8 @@ Tests (`backend/tests/`, pytest + FastAPI `TestClient`, run against the real Sup
 ```
 No linter configured yet.
 
+One-off scripts at the backend root (`create_tables.py`, `setup_storage.py`, `seed.py`, `seed_demo_candidates.py`) — not part of the app package, run directly against whatever `DATABASE_URL`/Supabase project `.env` points at. `seed_demo_candidates.py` generates realistic resume PDFs (`fpdf2`, dev-only dependency) and submits 10 fake candidates through the real API so the admin dashboard has believable demo data; output goes to gitignored `backend/seed_data/`.
+
 ### Frontend (`frontend/`)
 ```
 npm install
@@ -69,17 +73,21 @@ When adding a resource, follow this same split rather than putting logic directl
 
 Data access is direct to the Supabase Postgres instance via `DATABASE_URL` (SQLAlchemy/psycopg2), not through the Supabase REST client — the `supabase` Python package is used for Storage (resume uploads) and any auth-adjacent calls, not as the primary DB layer.
 
-**Frontend** (`frontend/src/`) is a single Vite React app covering both public and admin surfaces, split by route in `App.jsx` via `react-router-dom`:
+**Frontend** (`frontend/src/`) is a single Vite React app covering both public and admin surfaces, split by route in `App.jsx` via `react-router-dom` (nested routes for `/admin/*`):
 - `/` → `pages/ApplyPage.jsx` — public application form. Fully working: loads jobs from `GET /jobs`, submits to `POST /applications` via `lib/api.js`, client-side validation mirrors the backend's rules.
-- `/admin/login` → `pages/AdminLogin.jsx` — placeholder, not built yet (Phase 6).
-- `/admin` → `pages/AdminDashboard.jsx` — placeholder, not built yet (Phase 6/7).
+- `/admin/login` → `pages/AdminLogin.jsx` — working login, calls `lib/api.js`'s `login()`, stores the token via `lib/auth.js`.
+- `/admin` → guarded by `components/RequireAuth.jsx` (redirects to `/admin/login` if no token), renders `pages/AdminDashboard.jsx` as a layout (top nav + `<Outlet />`) with nested routes:
+  - `/admin/jobs` → `pages/admin/JobsPage.jsx` — fully working jobs CRUD (table, `Sheet` slide-over for create/edit, `AlertDialog` for delete).
+  - `/admin/candidates` → `pages/admin/CandidatesPage.jsx` — stub, not built yet (Phase 7).
 
-There is one frontend origin and one backend origin — the admin dashboard is not a separate deployable app, just routes gated behind the login flow once auth is implemented.
+There is one frontend origin and one backend origin — the admin dashboard is not a separate deployable app, just routes gated behind the login flow.
 
-- `lib/api.js` — fetch wrapper (`getJobs`, `submitApplication`), reads `VITE_API_URL`, parses FastAPI's error-detail shape (including validation-error arrays) into a plain message.
+- `lib/api.js` — fetch wrapper built around a shared `request()` helper; admin calls pass `auth: true` to attach the bearer token automatically. `getJobs`, `submitApplication`, `login`, `createJob`, `updateJob`, `deleteJob` so far. Parses FastAPI's error-detail shape (including validation-error arrays) into a plain message.
+- `lib/auth.js` — token storage (`localStorage` — acceptable for this internal tool; the public page never touches it). `getToken`/`setToken`/`clearToken`/`isAuthenticated`.
 - `lib/utils.js` — shadcn's `cn()` helper (clsx + tailwind-merge).
-- `components/ui/` — shadcn-generated primitives (`button`, `input`, `label`, `textarea`, `select`, `card` so far). Add more via `npx shadcn@latest add <name>`, don't hand-write these.
-- `components/` (non-`ui/`) — hand-built, product-specific components, e.g. `ResumeDropzone.jsx` (drag-and-drop file upload; shadcn has no primitive for this).
+- `components/ui/` — shadcn-generated primitives (`button`, `input`, `label`, `textarea`, `select`, `card`, `table`, `badge`, `sheet`, `alert-dialog` so far). Add more via `npx shadcn@latest add <name>`, don't hand-write these. Note: shadcn's `Table` already wraps itself in `overflow-x-auto` — don't add another wrapper.
+- `components/` (non-`ui/`) — hand-built, product-specific components: `ResumeDropzone.jsx` (drag-and-drop file upload; shadcn has no primitive for this), `RequireAuth.jsx` (route guard).
+- Touch targets: admin row action buttons are `h-10 w-10` (40px) rather than shadcn's smaller default icon-button size — keep new icon-only buttons at least that size.
 
 ## Secrets
 
