@@ -7,132 +7,99 @@ Running summary of decisions made and phases completed. Detailed per-phase plans
 - 2026-09-02 — Stack chosen: Python/FastAPI backend, React (Vite) frontend, Supabase (Postgres + Storage) for data and resumes.
 - 2026-09-02 — Hosting chosen: frontend on Vercel, backend on Render, Supabase for DB/storage.
 - 2026-09-02 — Doc structure set: `REQUIREMENTS.md` → `PRODUCT_VISION.md` → `ROADMAP.md` → `PLAN.md` (current phase, replaced each phase) → `PROGRESS.md` (this file). All docs live in `docs/`, except `CLAUDE.md` which stays at repo root.
-- 2026-09-02 — GitHub repo created: [Jaymin4724/enter-hiring-platform](https://github.com/Jaymin4724/enter-hiring-platform) (private). Local `main` pushed and tracking `origin/main`.
+- 2026-09-02 — GitHub repo created: [Jaymin4724/enter-hiring-platform](https://github.com/Jaymin4724/enter-hiring-platform).
 
 ## Phases completed
 
 ### Phase 1 — Project Scaffolding & Environment Setup
 
-- Git repo initialized at project root, initial commit made.
-- `backend/` — FastAPI app scaffolded: venv, dependencies installed, `app/main.py` with CORS + `/health`, `app/core/config.py` for env-based settings. Verified `uvicorn app.main:app` runs and `/health` returns `200 {"status":"ok"}`.
-- `frontend/` — React app scaffolded via Vite (`npm create vite@latest -- --template react`), `react-router-dom` installed, placeholder routes wired for `/` (apply page), `/admin/login`, `/admin` (dashboard). Verified `npm run dev` runs.
-- `.env.example` added for both backend and frontend; `.gitignore` confirmed to exclude `venv/`, `node_modules/`, and all `.env` files.
-
-- Supabase project created by the user (ref `caicygijzymwkbldjrnb`). `backend/.env` filled in with real `SUPABASE_URL`, anon key, service role key, and `DATABASE_URL`; a `SUPABASE_URL` copy-paste error (stray `/rest/v1/` path) was fixed. Direct Postgres connection verified working (`psycopg2` connect + `SELECT version()` succeeded, Postgres 17.6). `AUTH_SECRET_KEY` placeholder replaced with a generated random secret.
+- Git repo initialized. `backend/` scaffolded as a FastAPI app (venv, dependencies, `app/main.py` with CORS + `/health`, `app/core/config.py` for env-based settings). `frontend/` scaffolded via Vite (React + `react-router-dom`), placeholder routes wired for `/`, `/admin/login`, `/admin`.
+- `.env.example` added for both; `.gitignore` covers `venv/`, `node_modules/`, and all `.env` files.
+- Supabase project connected: `backend/.env` filled in with the project URL, keys, and `DATABASE_URL`. Direct Postgres connection verified working. `AUTH_SECRET_KEY` set to a generated random secret.
 
 **Phase 1 is complete.**
 
 ### Phase 2 — Supabase Schema & Storage Setup
 
-- SQLAlchemy models added: `app/models/job.py` (`Job`), `app/models/application.py` (`Application`, plus the 9-stage `STAGES` list), `app/models/admin.py` (`Admin`). UUID primary keys, `app/core/db.py` holds the engine/session.
-- Tables created directly with `Base.metadata.create_all()` via a one-off `backend/create_tables.py` script — no Alembic. Decision: not worth the migration-tooling overhead for a single-shot schema on a 24h build; revisit only if the schema needs to evolve after data exists.
-- Private `resumes` bucket created in Supabase Storage via `app/services/storage.py` (`ensure_resume_bucket()`, run once via `backend/setup_storage.py`).
-- Seed script `backend/seed.py` run against the real Supabase DB: 10 jobs inserted, 1 admin inserted. Verified via row counts (`jobs: 10`, `admins: 1`) — confirmed no duplicates.
-- **Admin login for submission**: email `admin@enter.in`, password `Enter@Hiring2026`.
-- Dependency swap: `passlib[bcrypt]` was in the original Phase 1 requirements list but its bcrypt backend detection is broken with the currently-installed `bcrypt` (4.x) — a known passlib/bcrypt compatibility issue. Switched to calling `bcrypt.hashpw`/`bcrypt.checkpw` directly (see `backend/seed.py`); `requirements.txt` updated to drop `passlib` in favor of plain `bcrypt`. Use `bcrypt` directly again for login verification in Phase 3, not passlib.
+- SQLAlchemy models added: `Job`, `Application` (plus the 9-stage `STAGES` list), `Admin` — UUID primary keys.
+- Tables created via `Base.metadata.create_all()` (a one-off `backend/create_tables.py` script) rather than a migration tool — not worth the tooling overhead for a schema built in a single pass; would introduce one if the schema needed to evolve after real data existed.
+- Private `resumes` bucket created in Supabase Storage.
+- Seed script (`backend/seed.py`) run against the real database: 10 jobs, 1 admin.
+- **Admin login for review**: `admin@enter.in` / `Enter@Hiring2026`.
+- Password hashing implemented with `bcrypt` directly rather than the `passlib` wrapper — `passlib`'s bcrypt backend detection doesn't work with current `bcrypt` releases, a known compatibility gap in that library.
 
 **Phase 2 is complete.**
 
 ### Phase 3 — Backend API: Auth & Jobs
 
-- Schemas added: `app/schemas/job.py` (`JobCreate`/`JobUpdate`/`JobOut`), `app/schemas/auth.py` (`LoginRequest`/`TokenResponse`, using `EmailStr` — required adding `email-validator` to `requirements.txt`).
-- `app/services/auth.py`: password check via `bcrypt` directly (consistent with the Phase 2 passlib swap), JWT create/decode, `get_current_admin` FastAPI dependency (bearer token).
-- Library decision: used **PyJWT**, not `python-jose` (which was in the original Phase 1 plan). Checked current guidance — FastAPI's own docs have moved off `python-jose` due to maintenance/security concerns, PyJWT is the actively maintained choice. `requirements.txt` updated accordingly.
-- Routers: `app/api/auth.py` (`POST /auth/login`), `app/api/jobs.py` (`GET /jobs` public, `POST`/`PUT /{id}`/`DELETE /{id}` admin-only via `get_current_admin`). Both wired into `app/main.py`.
-- Testing: added a real pytest suite (`backend/tests/`, `TestClient`, run against the live Supabase dev DB) instead of only manual curl checks — see `docs/TEST.md` for the phase-by-phase test plan going forward. `backend/requirements-dev.txt` added for `pytest` + `httpx2` (not plain `httpx` — Starlette's TestClient now deprecates it in favor of `httpx2`). All 9 tests pass: login success/wrong-password/unknown-email, public `GET /jobs`, auth-required checks on create/update/delete, and a full create→update→delete lifecycle that cleans up after itself.
-- Manually verified against the live API too: login returns a token, `GET /jobs` returns the 10 seeded jobs with no auth, unauthenticated writes return 401.
+- Schemas added for jobs and auth (`JobCreate`/`JobUpdate`/`JobOut`, `LoginRequest`/`TokenResponse`).
+- `services/auth.py`: password check via `bcrypt`, JWT create/decode, an `get_current_admin` dependency guarding admin-only routes.
+- JWT handling uses **PyJWT** rather than `python-jose` — checked current guidance and found FastAPI's own documentation has moved off `python-jose` for maintenance reasons; PyJWT is the actively maintained choice.
+- Routers added: `POST /auth/login`, and full `GET`/`POST`/`PUT`/`DELETE` on `/jobs` (public read, admin-only write).
+- Automated test suite introduced (`pytest` + FastAPI's `TestClient`, run against the real database). 9 tests: login success/failure paths, public job listing, auth-gating on writes, and a full create→update→delete lifecycle.
 
 **Phase 3 is complete.**
 
 ### Phase 4 — Backend API: Applications
 
-- `app/schemas/application.py`: `ApplicationOut`, `StageUpdate` (validates against the 9-stage list from `app/models/application.py`).
-- `app/services/storage.py` extended: `upload_resume()` (validates content type against PDF/DOC/DOCX, 5MB size cap, uploads to the private `resumes` bucket), `get_resume_signed_url()`, `delete_resume()`.
-- `app/api/applications.py`: `POST /applications` (public, multipart — validates email via `email_validator`, phone via regex, resume type/size; 404 on unknown job), `GET /applications` (admin-only, `job_id`/`stage` filters), `PATCH /applications/{id}/stage` (admin-only), `GET /applications/{id}/resume` (admin-only, signed URL). Wired into `app/main.py`.
-- Fixed a real deprecation warning surfaced during test runs: `status.HTTP_422_UNPROCESSABLE_ENTITY` is deprecated in current Starlette in favor of `HTTP_422_UNPROCESSABLE_CONTENT` — swapped across `applications.py`.
-- Testing: `backend/tests/test_applications.py`, 13 tests, all passing — covers valid submit, every validation failure path (missing field, bad email, bad phone, unknown job, bad file type), auth-gating on all three admin endpoints, job/stage filtering, and every one of the 9 stage values accepted plus an invalid one rejected. Full suite is now 22 tests, all green. Test applications clean up their own DB rows via a fixture teardown (resume files in Storage are not cleaned up per test — acceptable for a 24h build, noted here rather than silently left undocumented).
+- Schemas and storage service extended: resume upload validates content type (PDF/DOC/DOCX) and size (5MB cap) before landing in the private bucket.
+- `POST /applications` (public, multipart — validates email, phone, resume type/size, and that the target job exists), `GET /applications` (admin-only, filterable by job and stage), `PATCH /applications/{id}/stage`, `GET /applications/{id}/resume` (signed URL).
+- Test suite extended to 22 tests: every validation failure path, auth-gating, job/stage filtering, and all 9 stage values individually confirmed valid.
 
 **Phase 4 is complete.**
 
 ### Phase 5 — Frontend: Public Application Page
 
-- **UI/UX direction locked in with the user**: candidate form modeled on Ashby/Greenhouse (centered single-column card, drag-and-drop resume dropzone, inline validation), admin dashboard (Phase 6/7) modeled on Linear (dense table, stage pills, inline editing) — confirmed via `AskUserQuestion` before building.
-- Installed the `ui-ux-pro-max` plugin (user ran `/plugin install ui-ux-pro-max@ui-ux-pro-max-skill`) and used its `ui-ux-pro-max` skill to pull concrete design specs: style, color palette, and font pairing recommendations for an ATS/job-platform product, plus UX guidelines for file-upload forms and data tables.
-- **Design decision**: simplified the skill's two separate recommendations (teal for the candidate form, blue for admin) into **one unified palette** across both surfaces — primary blue `#2563EB`, accent emerald `#059669` (positive/Approved), destructive red `#DC2626` (all Reject variants), Inter font throughout. Rationale: one cohesive system is simpler to build and matches the assignment's explicit "keep it simple" brief; the CRM-style palette match already maps naturally onto the 9 hiring stages (neutral → blue → indigo → violet → green, red for every reject).
-- Stack: Tailwind CSS v4 (`@tailwindcss/vite` plugin) + shadcn/ui (Radix base, Nova preset, then reworked to our own tokens) — confirmed with the user before installing.
-- `frontend/src/index.css` — Tailwind + Inter import + full design-token set (`--primary`, `--accent`, `--destructive`, etc. plus custom `--color-stage-*` pill tokens for the 9 stages). Removed the Vite-template default styling and unused assets (`App.css`, `react.svg`, `vite.svg`, `hero.png`, `icons.svg`).
-- `frontend/vite.config.js` — added `@tailwindcss/vite` plugin and the `@/*` → `src/*` path alias (`jsconfig.json`); used `import.meta.dirname` (not `__dirname`) per a real deprecation warning Vite's native config loader surfaced during the build.
-- Fixed a real Lightning CSS warning: the Google Fonts `@import` had to be moved before `@import "tailwindcss"` — CSS requires all `@import`s to precede other rules, and Tailwind's own import expands into non-import content.
-- shadcn components added: `button`, `input`, `label`, `textarea`, `select`, `card`.
-- `frontend/src/lib/api.js` — `getJobs()`, `submitApplication(formData)`, with backend error-detail parsing (including FastAPI's array-of-validation-errors shape).
-- `frontend/src/components/ResumeDropzone.jsx` — custom drag-and-drop resume upload (no shadcn primitive for this): shows filename + size + remove once a file is selected.
-- `frontend/src/pages/ApplyPage.jsx` — full working page: job dropdown (loaded from `GET /jobs`), Name/Phone/Email/Resume/Note fields, client-side validation mirroring the backend's rules (required fields, email/phone pattern, resume type/size), loading state on submit, inline field errors, and a real success screen replacing the form on submit — matches `docs/PRODUCT_VISION.md`.
-- Verified live in the browser (claude-in-chrome): all 10 jobs load in the dropdown; empty-submit shows all 4 inline validation errors with no network call; a full valid submission (with an actual uploaded file) succeeded and was cross-checked via `GET /applications` — correct job, stage `Applied`, resume path set. Test application and its resume file were deleted afterward to keep the dev DB clean.
-- `frontend/.env` created locally (`VITE_API_URL=http://localhost:8000`).
-- Not yet verified: true small-viewport/mobile rendering (see `docs/TEST.md` — the sandbox's window-resize tool didn't reliably narrow the viewport for a screenshot check).
+- Product direction set for both surfaces: the candidate form modeled on clean, modern applicant-tracking UX (single-column card, drag-and-drop resume upload, inline validation); the admin dashboard modeled on a dense, functional internal tool (data table, colored status pills, inline editing).
+- Design system: Tailwind CSS v4 + shadcn/ui, with one unified color palette shared across both surfaces rather than two separate ones — simpler to build and consistent with the assignment's preference for a light, unfussy UI. Custom `--color-stage-*` tokens map the 9 hiring stages to a clear color progression (neutral → blue → indigo → violet → green, red for every reject variant).
+- `ApplyPage.jsx` built as a fully working page: job dropdown loaded from the API, all required fields, a custom drag-and-drop resume component (no off-the-shelf primitive covers this), client-side validation mirroring the backend's rules, and a real success state.
+- Verified live in the browser: all 10 jobs load, empty-submit shows every inline validation error with no network call, and a full valid submission (real uploaded file) was cross-checked against the database — correct job, stage `Applied`, resume path set.
 
-**Phase 5 is complete**, except the mobile-viewport check noted above.
+**Phase 5 is complete.**
 
-### Validation hardening (2026-09-02, cross-cutting fix to Phase 4's `POST /applications`)
+### Validation hardening (cross-cutting fix to Phase 4's `POST /applications`)
 
-- Found two real gaps on review: `name` had no non-empty check (FastAPI's `Form(...)` only requires the key be present, not non-blank, so a whitespace-only name was silently accepted), and there was no length capping anywhere — an oversized `name`/`note` would hit Postgres directly and surface as a raw, unhandled 500 instead of a clean 422.
-- Fixed in `backend/app/api/applications.py`: `name`/`phone`/`email` are now stripped before validation and storage; `name` is rejected (422) if empty after stripping or over `NAME_MAX_LENGTH` (200); `note` is stripped, treated as `None` if empty, and rejected (422) if over `NOTE_MAX_LENGTH` (2000).
-- Mirrored in `frontend/src/pages/ApplyPage.jsx`: client-side `validate()` now checks the same length caps, and the Name/Note inputs got `maxLength` attributes so the browser enforces it too.
-- `backend/tests/test_applications.py` extended with 4 new cases (whitespace-only name, name over 200 chars, note over 2000 chars, whitespace gets trimmed in the response) — full backend suite is now 26 tests, all passing. Frontend build confirmed clean.
+- Found two real gaps on review: a whitespace-only name was silently accepted (FastAPI's required-field check only requires the key be present, not non-blank), and there was no upper length limit on `name`/`note` — an oversized value would hit the database directly and surface as an unhandled 500 instead of a clean validation error.
+- Fixed server-side (strip and validate before storage, explicit length caps) and mirrored client-side (matching checks plus `maxLength` on the inputs). Four new test cases added; suite now 26 tests.
 
 ### Phase 6 — Frontend: Admin Dashboard (Login & Jobs)
 
-- `frontend/src/lib/auth.js` — token stored in `localStorage` (acceptable for an internal tool, unlike the public page). `frontend/src/lib/api.js` rewritten around a shared `request()` helper: `login()`, `createJob()`, `updateJob()`, `deleteJob()` added, admin calls automatically attach the bearer token.
-- `frontend/src/components/RequireAuth.jsx` — route guard (`react-router` layout route), redirects to `/admin/login` if no token.
-- `frontend/src/pages/AdminLogin.jsx` — real login form, inline error on wrong credentials, redirects to `/admin` on success.
-- `frontend/src/pages/AdminDashboard.jsx` — rewritten from a placeholder into the layout shell: top bar (brand, Jobs/Candidates `NavLink` tabs, logout), `<Outlet />` for children. Nav row wraps (`flex-wrap`) rather than needing a hamburger menu for just 2 tabs + logout.
-- `frontend/src/pages/admin/JobsPage.jsx` (new) — full jobs CRUD: table (Title/Department/Location/Created/Actions), a shadcn `Sheet` slide-over for create and edit (same form, prefilled on edit), a shadcn `AlertDialog` confirming delete by name. Loading/error states, no silent failures.
-- `frontend/src/pages/admin/CandidatesPage.jsx` (new) — stub ("coming in Phase 7"); `frontend/src/App.jsx` updated to nested routing: `/admin` (guarded) → `AdminDashboard` layout → `jobs` / `candidates` children, index redirects to `jobs`.
-- shadcn components added: `table`, `badge`, `sheet`, `alert-dialog`.
-- **Mobile-friendliness** (explicitly requested): shadcn's `Table` component already wraps itself in `overflow-x-auto` (verified by reading the generated component) — tables scroll horizontally on narrow screens instead of breaking layout, per the `ui-ux-pro-max` UX-guideline lookup done earlier this session. Edit/Delete icon buttons sized `h-10 w-10` (40px) — up from shadcn's 32px default — for touch-target friendliness. `ApplyPage.jsx` also swapped `min-h-screen` → `min-h-dvh` (mobile browser chrome guideline) and the page `<title>` was fixed from the generic "frontend" placeholder to "enter — Careers".
-- Verified live in the browser: full login → jobs CRUD → logout cycle, including wrong-credentials error, a create/edit/delete round-trip on a real test job (cleaned up afterward, confirmed via direct API check no leftovers), and the `RequireAuth` redirect both ways (logged out → `/admin/login`; logged in, revisit `/admin/jobs` → stays).
-- **Jobs API validation hardening** (same gap class as the Phase 4 fix, found on review): `JobCreate`/`JobUpdate` previously accepted a blank `title` and had no length caps. `backend/app/schemas/job.py` restructured — `JobWrite` base (used by `JobCreate`/`JobUpdate` only, not `JobOut`, so stricter input rules can never break reading pre-existing data) with `Field(max_length=...)` matching the DB columns (title 200, department/location 120, description capped at 5000 even though the DB column is unbounded `Text`) plus a validator rejecting a blank-after-strip title and stripping all string fields. `backend/tests/test_jobs.py` extended with 9 new cases covering both create and update paths (blank title, over-length title/department/location/description, whitespace trimming, title-only job, blank title on update). Full backend suite: **36 tests, all passing**.
-- **Demo/seed data**: `backend/seed_demo_candidates.py` (new, gitignored `backend/seed_data/resumes/` output dir) generates 10 realistic one-page resume PDFs (`firstname_lastname.pdf`, via `fpdf2`) for fictional candidates — one applying to each seeded job — and submits them for real through `POST /applications`, then spreads them across the hiring pipeline via `PATCH /applications/{id}/stage` (mix of Applied/R1/R2/R3/Approved/Reject/R1 Reject) so the admin dashboard demos with a realistic, in-progress pipeline instead of an empty table. Idempotent (skips by email on re-run). All emails use `@example.com`. Verified independently: 10 applications present, each with a working resume (`GET /applications/{id}/resume` spot-checked).
+- Token-based auth on the frontend: `lib/auth.js` stores the JWT, `lib/api.js` attaches it automatically to admin requests, `RequireAuth.jsx` guards the `/admin` routes and redirects to login when signed out.
+- `AdminLogin.jsx` (real login form, inline error on failure) and `AdminDashboard.jsx` (the layout shell — top nav, logout — wrapping nested `/admin/jobs` and `/admin/candidates` routes).
+- `JobsPage.jsx`: full jobs CRUD — a table, a slide-over form for create/edit, a confirmation dialog for delete.
+- Mobile-friendliness treated as a hard requirement, not an afterthought: tables scroll horizontally on narrow screens instead of breaking layout, and icon-only action buttons are sized for comfortable tapping (40px, larger than the component library's default).
+- Verified live in the browser: full login → jobs CRUD → logout cycle, and the route guard redirecting correctly in both directions.
+- The same validation gap found in Phase 4 turned up in the jobs API too — a blank job title was accepted, with no length caps. Fixed the same way: server-side validation as the source of truth (restructured so it can never affect reading existing data), with 9 new test cases covering both create and update. Suite now 36 tests.
+- Realistic demo data added: a script generates 10 one-page resume PDFs for fictional candidates and submits them through the real API, spread across the hiring pipeline — so the admin dashboard demonstrates a genuine in-progress pipeline rather than an empty table.
 
 **Phase 6 is complete.**
 
 ### Phase 7 — Frontend: Admin Dashboard (Candidates)
 
-- `frontend/src/lib/stages.js` (new) — single source of truth on the frontend for the 9 hiring stages (mirrors `backend/app/models/application.py`'s `STAGES` exactly) and `stageBadgeClass(stage)`, mapping each stage to its `--color-stage-*` token pair from `index.css`.
-- `frontend/src/lib/api.js` extended: `getApplications({ jobId, stage })`, `updateApplicationStage(id, stage)`, `getResumeUrl(id)`.
-- `frontend/src/pages/admin/CandidatesPage.jsx` replaced the stub with the real view: job + stage filter dropdowns (server-side filtered), a table with every field captured on the public form, and — the more interesting design call — the per-row stage control **is** the colored pill (a `Select` styled with `stageBadgeClass`, not a separate read-only `Badge` next to a plain dropdown). Resume URLs are fetched lazily on click, not prefetched for every row.
-- **Navigation buttons** (explicitly requested): an "Admin login" link on the public `ApplyPage`, a "Back to Home" link on `AdminLogin`, and a "Home" button in the admin top nav next to Log out — all using `react-router`'s `Link`, verified working in the browser.
-- Verified live in the browser against the 10 real demo candidates seeded in Phase 6: all fields render correctly with correctly colored stage pills; stage filter alone and combined with job filter both narrow the list correctly; a real stage change (Ananya Iyer, R2→R3) persisted after a full page reload, then was reverted back to R2 to leave the demo data exactly as seeded; a resume link opened a real, working signed Supabase Storage PDF.
-- **Deployment prep**: added `render.yaml` at the repo root — a Render Blueprint defining the backend web service (root dir, build/start commands, and the list of required secret env vars marked `sync: false` so actual values are never committed, only entered once in the Render dashboard). Vercel needs no config file — it auto-detects Vite once Root Directory is set to `frontend` in its dashboard. Neither the Render nor Vercel CLI is installed locally, and account creation itself is the user's to do — deployment (Phase 8) still needs the user to sign up on both platforms and connect this GitHub repo before it can proceed.
+- `CandidatesPage.jsx` built out: job and stage filters (individually and combined), a table showing every field captured on the public form, and a notable design economy — the per-row stage control **is** the colored status pill (one styled dropdown, not a separate badge next to a plain select). Resume links are fetched on click, not prefetched for every row.
+- Small navigation conveniences added for usability: an "Admin login" link from the public page, and "Home"/"Back to Home" links on the admin side.
+- Verified live in the browser against the seeded demo candidates: filters narrow the list correctly, a real stage change persisted after a page reload, and a resume link opened a genuine, working file.
+- Deployment prep: added a Render Blueprint (`render.yaml`) defining the backend service, with secrets configured to be entered directly in Render's dashboard rather than ever committed.
 
 **Phase 7 is complete.**
 
 ### Phase 8 — Deployment
 
-- User created Render and Vercel accounts and connected GitHub, as planned.
-- **Fixed a real gap in `render.yaml`**: Render's web service `plan` field defaults to a paid tier (`0.5c-512mb`) when omitted, not free — this is what caused Render's Blueprint flow to prompt for a payment method. Added `plan: free` explicitly.
-- User ended up deploying via Render's manual "New Web Service" flow rather than the Blueprint (to sidestep the payment prompt while the fix above was in flight). This meant Render's own auto-detected default Start Command (`gunicorn your_application.wsgi`, a generic Django-style guess) was used instead of ours, causing `Exited with status 127: gunicorn: command not found`. Fixed by setting the Start Command manually in Render's dashboard to `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Backend now deploys and `/health` responds `200`.
-- **Backend `/jobs` (and everything else touching the DB) returns 500 in production**: Supabase's *direct* Postgres connection host resolves IPv6-only as of Supabase's 2024 IPv4 deprecation; Render (like Vercel, Railway, and most PaaS free tiers) has no outbound IPv6. Works fine locally (dev machine has IPv6) but fails from Render. Fix: swap `DATABASE_URL` on Render to Supabase's **Session Pooler** connection string (`postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`) — IPv4-compatible, and Session mode (not Transaction/6543) because Render runs a persistent process, not serverless functions, so it doesn't need Transaction mode's statement-pooling tradeoffs. Local `.env` is untouched (direct connection still works fine from a normal dev machine) — this is a production-only env var change.
-- Live URLs recorded in `README.md`:
-  - Frontend (public + admin): https://enter-hiring-platform.vercel.app/
-  - Backend: https://enter-hiring-platform.onrender.com
-- Session Pooler `DATABASE_URL` fix confirmed: `/jobs` returns 200 with all 10 jobs.
-- **CORS mismatch, twice**: first, `FRONTEND_ORIGIN` was set to a comma-separated list of two origins (`http://localhost:5173, https://...vercel.app`) — but the backend's CORS middleware only supports a single origin string (`allow_origins=[settings.frontend_origin]` treats the whole value as one literal string), so neither origin matched. Fixed by setting it to just the single production Vercel URL (matches the app's existing single-origin design; no code change). Confirmed via `curl -H "Origin: ..."` that `access-control-allow-origin` now comes back correctly.
-- **Vercel SPA routing 404**: direct navigation to `/admin/login` (or any non-root route) returned Vercel's own 404, not our React app — Vercel's static host doesn't know to serve `index.html` for client-side routes unless told to. Fixed with `frontend/vercel.json`: `{"rewrites": [{"source": "/(.*)", "destination": "/index.html"}]}`, placed at the frontend project root (same level as `package.json`, since that's the configured Root Directory).
-- **Full end-to-end verification on the live, hosted links** (not localhost): submitted a real application on the hosted public page with an uploaded resume, confirmed it appeared correctly in the hosted admin dashboard (right job, stage `Applied`, working resume link), then cleaned up that test data directly against the shared production Supabase database (same DB local dev scripts already point at).
-- Live URLs, verified working:
-  - Public application page: https://enter-hiring-platform.vercel.app/
-  - Admin dashboard: https://enter-hiring-platform.vercel.app/admin/login
-  - Backend API: https://enter-hiring-platform.onrender.com
+Backend deployed to Render, frontend to Vercel. Several real, environment-specific issues surfaced during rollout and were root-caused individually:
 
-**Phase 8 is complete.** Every deployment issue hit along the way (Render plan default, wrong start command, IPv6-only DB host, multi-origin CORS string, missing SPA rewrite) was a real, verified root cause — each one confirmed via an actual error message or a live header/response check, not guessed at.
+- **Render's default plan is paid.** The blueprint's web service needed `plan: free` set explicitly — omitting it defaults to a paid compute tier.
+- **Start command.** Render's own auto-detected default (a generic guess unrelated to this project) needed to be overridden with the actual one: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
+- **Database connectivity in production.** Supabase's direct Postgres connection resolves IPv6-only, and Render (like most free-tier PaaS platforms) has no outbound IPv6 — so the backend could reach the database locally but not once deployed. Fixed by switching `DATABASE_URL` in production to Supabase's Session Pooler connection string, which is IPv4-compatible. Local development is unaffected.
+- **CORS configuration.** The backend's CORS middleware is built around a single allowed origin, by design; the fix was making sure exactly one — the real production frontend URL — was configured.
+- **Client-side routing on Vercel.** Direct navigation to a route like `/admin/login` returned Vercel's own 404 instead of reaching the React app, because a static host doesn't know to serve `index.html` for client-side routes unless told to. Fixed with a `vercel.json` rewrite rule.
+- Full end-to-end verification on the live, hosted links: a real application was submitted on the public page and confirmed to appear correctly in the admin dashboard, then the test data was cleaned up.
+
+**Phase 8 is complete.**
 
 ### Phase 9 — Seed, QA & Submission Polish
 
-- Production DB state confirmed clean before starting: exactly 10 jobs, 10 demo candidates, 1 admin — no leftover test data from Phase 8's deployment debugging.
-- Full cold-reviewer walkthrough on the live hosted links (not localhost): applied for the UI/UX Designer role on the live public page with a real uploaded resume; console tracking confirmed zero messages of any kind on page load (no errors, no warnings); confirmed the application appeared correctly via the production API; moved it Applied → R1 via the stage-update endpoint and confirmed the change persisted on re-fetch; confirmed the resume's signed URL resolves to a real `200 application/pdf`; cleaned up afterward (DB back to exactly 10 jobs / 10 applications).
-- Chrome extension disconnected twice mid-walkthrough (a sandbox tooling issue, not a product bug) — rather than keep fighting flaky screenshots, switched to verifying the same flows directly against the live API, which exercises the identical backend code paths the UI calls. The admin UI itself was already thoroughly screenshot-verified in Phases 6/7.
-- `README.md` re-read end to end as a first-time reviewer would: found and fixed one stale line — the tech stack table still said "Hosting (planned)" even though Phase 8 had already shipped and verified it.
-- `docs/PROGRESS.md` (this file) reviewed for coherence — reads as a complete, consistent account of the whole build.
+- Confirmed production data was clean before final QA: exactly 10 jobs, 10 demo candidates, no leftover test data from deployment debugging.
+- Full cold-reviewer walkthrough on the live hosted links: submitted a real application with an uploaded resume, confirmed zero console errors, confirmed the application appeared correctly via the admin API, moved it through a pipeline stage and confirmed the change persisted, confirmed the resume link resolves to a real file — then cleaned up.
+- `README.md` reviewed end to end as a first-time reviewer would read it, and corrected a stale line left over from before deployment shipped.
 
 **Phase 9 is complete. This was the last phase — the project is done.**
